@@ -1,26 +1,26 @@
-import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
+import threading
+from flask import Flask
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = "9281252293:AAHAv8xkHuZqm2w5nk0-XWPaR9n4QlLutI8"
+TOKEN = os.environ.get("9281252293:AAHAv8xkHuZqm2w5nk0-XWPaR9n4QlLutI8")
+flask_app = Flask(__name__)
 
-logging.basicConfig(level=logging.INFO)
+@flask_app.route('/')
+def home():
+    return "Bot LIVE 24h - OK"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Ami tomar bot. Ami chalu achi!")
+    keyboard = [["1 Din Kharide"], ["7 Din Kharide"], ["30 Din Kharide"]]
+    await update.message.reply_text("Stock - 1 Din:0  7 Din:0  30 Din:0\nHlw Main hu Bot!", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Tumi ja likhbe ami tai reply korbo!")
-
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Tumi bolle: {update.message.text}")
-
-def main():
+def run_bot():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    main()
+    threading.Thread(target=run_bot, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host='0.0.0.0', port=port)
