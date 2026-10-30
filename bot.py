@@ -4,7 +4,7 @@ from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = os.environ.get("9281252293:AAHAv8xkHuZqm2w5nk0-XWPaR9n4QlLutI8")
+TOKEN = "9281252293:AAHAv8xkHuZqm2w5nk0-XWPaR9n4QlLutI8"
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
