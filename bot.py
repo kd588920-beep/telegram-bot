@@ -11,5 +11,23 @@ async def start(update, context):
  await update.message.reply_text("Select plan:", reply_markup=KEYBOARD)
 async def buy(update, context):
  t=update.message.text
- if "1 Day" in t: await update.message.reply_text("1 Day - 30 Taka")
- elif "3 Day" in t
+ if "1 Day" in t:
+  await update.message.reply_text("1 Day - 30 Taka")
+ elif "3 Day" in t:
+  await update.message.reply_text("3 Day - 70 Taka")
+ elif "7 Day" in t:
+  await update.message.reply_text("7 Day - 120 Taka")
+ elif "15 Day" in t:
+  await update.message.reply_text("15 Day - 200 Taka")
+ elif "30 Day" in t:
+  await update.message.reply_text("30 Day - 350 Taka")
+def run_flask():
+ app.run(host="0.0.0.0", port=int(os.environ.get("PORT",10000)))
+def run_bot():
+ a=Application.builder().token(TOKEN).build()
+ a.add_handler(CommandHandler("start", start))
+ a.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, buy))
+ a.run_polling()
+if __name__=="__main__":
+ threading.Thread(target=run_flask, daemon=True).start()
+ run_bot()
