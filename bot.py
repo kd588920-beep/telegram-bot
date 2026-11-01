@@ -24,10 +24,17 @@ def save_stock():
         json.dump(stock, f)
 
 def get_stock_text():
-    return f"""📦 **Total Stock:**
-1D: {len(stock['1D'])} | 3D: {len(stock['3D'])} | 7D: {len(stock['7D'])} | 15D: {len(stock['15D'])} | 30D: {len(stock['30D'])}"""
+    return f"📦 Total Stock:\n1D: {len(stock['1D'])} | 3D: {len(stock['3D'])} | 7D: {len(stock['7D'])} | 15D: {len(stock['15D'])} | 30D: {len(stock['30D'])}"
 
 user_state = {}
+
+@bot.message_handler(commands=['cancel'])
+def cancel_handle(message):
+    if message.from_user.id in user_state:
+        user_state.pop(message.from_user.id)
+        bot.send_message(message.chat.id, "❌ Cancelled! State clear hoye geche.\nEbar /admin likho.")
+    else:
+        bot.send_message(message.chat.id, "Kichu cancel korar nei.")
 
 @bot.message_handler(commands=['admin'])
 def admin_panel(message):
@@ -40,17 +47,18 @@ def admin_panel(message):
         types.InlineKeyboardButton("✅ 15D Add", callback_data="add_15D"),
         types.InlineKeyboardButton("✅ 30D Add", callback_data="add_30D"),
     )
-    bot.send_message(message.chat.id, f"{get_stock_text()}\n\n👇 **Konta add korbe?**", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"{get_stock_text()}\n\n👇 Konta add korbe?\nCancel korte /cancel likho", reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("add_"))
 def ask_keys(call):
     plan = call.data.split("_")[1]
     user_state[call.from_user.id] = plan
     bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, f"🔑 **{plan} er key paste koro (1 line = 1 key)**\nSend koro.")
+    bot.send_message(call.message.chat.id, f"🔑 {plan} er key paste koro\nCancel korte /cancel likho.")
 
 @bot.message_handler(func=lambda m: m.from_user.id in user_state)
 def save_keys(message):
+    if message.text.startswith('/'): return
     plan = user_state.pop(message.from_user.id)
     keys = [k.strip() for k in message.text.split("\n") if k.strip()]
     stock[plan].extend(keys)
@@ -59,6 +67,8 @@ def save_keys(message):
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    if message.from_user.id in user_state:
+        user_state.pop(message.from_user.id)
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🛒 Buy 1D", callback_data="buy_1D"),
                types.InlineKeyboardButton("🛒 Buy 3D", callback_data="buy_3D"))
