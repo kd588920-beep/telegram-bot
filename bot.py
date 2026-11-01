@@ -32,7 +32,7 @@ user_state = {}
 def cancel_handle(message):
     if message.from_user.id in user_state:
         user_state.pop(message.from_user.id)
-    bot.send_message(message.chat.id, "❌ Cancelled! State clear hoye geche.", reply_markup=types.ReplyKeyboardRemove())
+    bot.send_message(message.chat.id, "❌ Cancelled!", reply_markup=types.ReplyKeyboardRemove())
 
 @bot.message_handler(commands=['admin'])
 def admin_panel(message):
@@ -47,6 +47,24 @@ def admin_panel(message):
     )
     bot.send_message(message.chat.id, f"{get_stock_text()}\n\n👇 Konta add korbe?\nCancel: /cancel", reply_markup=markup, parse_mode="Markdown")
 
+# --- PURONO DHUSOR KEYBOARD FIX ---
+@bot.message_handler(func=lambda m: m.text and ("Stock" in m.text or "All Keys" in m.text))
+def stock_old(message):
+    if message.from_user.id != ADMIN_ID: return
+    bot.send_message(message.chat.id, get_stock_text(), reply_markup=types.ReplyKeyboardRemove())
+
+@bot.message_handler(func=lambda m: m.text and ("Add Keys" in m.text or "Remove Keys" in m.text))
+def add_old(message):
+    if message.from_user.id != ADMIN_ID: return
+    admin_panel(message)
+
+@bot.message_handler(func=lambda m: m.text and "User Menu" in m.text)
+def usermenu_old(message):
+    if message.from_user.id in user_state:
+        user_state.pop(message.from_user.id)
+    bot.send_message(message.chat.id, "✅ Menu removed! Ebar /admin likho", reply_markup=types.ReplyKeyboardRemove())
+    start(message)
+
 @bot.callback_query_handler(func=lambda c: c.data.startswith("add_"))
 def ask_keys(call):
     plan = call.data.split("_")[1]
@@ -57,11 +75,13 @@ def ask_keys(call):
 @bot.message_handler(func=lambda m: m.from_user.id in user_state)
 def save_keys(message):
     if message.text.startswith('/'): return
+    if "Stock" in message.text or "Add Keys" in message.text or "User Menu" in message.text:
+        return
     plan = user_state.pop(message.from_user.id)
     keys = [k.strip() for k in message.text.split("\n") if k.strip()]
     stock[plan].extend(keys)
     save_stock()
-    bot.send_message(message.chat.id, f"✅ {len(keys)} ta key {plan} te add holo!\n\n{get_stock_text()}", parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"✅ {len(keys)} ta key {plan} te add holo!\n\n{get_stock_text()}", parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove())
 
 @bot.message_handler(commands=['start'])
 def start(message):
