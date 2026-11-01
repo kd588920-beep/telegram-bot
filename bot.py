@@ -23,8 +23,8 @@ def save_users(users):
 users = load_users()
 
 GAMES = {
-    "INDIA": ["Ludo", "Rummy", "Teen Patti"],
-    "BANGLADESH": ["Ludo", "Call Break", "29 Card Game"]
+    "INDIA": ["Carrom Disc Pool", "Free Fire", "8 Ball Pool"],
+    "BANGLADESH": ["Carrom Disc Pool", "Free Fire", "8 Ball Pool"]
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,7 +36,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("Change Country", callback_data="change_country")])
         await update.message.reply_text(f"You are from {country} ✅\nSelect a game:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     keyboard = [[InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")],[InlineKeyboardButton("🇧🇩 BANGLADESH", callback_data="BANGLADESH")]]
     await update.message.reply_text("Select your country:", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -45,12 +44,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = str(query.from_user.id)
     data = query.data
-
     if data == "change_country":
         keyboard = [[InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")],[InlineKeyboardButton("🇧🇩 BANGLADESH", callback_data="BANGLADESH")]]
         await query.edit_message_text("Select your country:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     if data in ["INDIA", "BANGLADESH"]:
         users[user_id] = {"country": data}
         save_users(users)
@@ -58,10 +55,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton(g, callback_data=f"game_{g}")] for g in games]
         await query.edit_message_text(f"You selected {data} ✅\nSelect a game:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     if data.startswith("game_"):
         game = data.replace("game_", "")
-        await query.edit_message_text(f"You selected {game} from {users[user_id]['country']} 🎮\nGame starting soon...")
+        await query.edit_message_text(f"You selected {game} 🎮\nPrice list / details coming next...")
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
