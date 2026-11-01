@@ -1,9 +1,20 @@
 import json, os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from flask import Flask
+import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_FILE = "users.json"
+
+# Flask for Render
+app = Flask(__name__)
+@app.route('/')
+def home():
+    return "Bot is Live!"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
 def load_users():
     if os.path.exists(DB_FILE):
@@ -22,34 +33,30 @@ users = load_users()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    if user_id in users:
-        country = users[user_id].get("country", "India")
-        balance = users[user_id].get("balance", 0)
-        name = update.effective_user.first_name
-        await update.message.reply_text(f"👑 Welcome Back! 🌍 {country} 💰 ₹{balance}\n\n👤 Name: {name}\nPlan: 👑 ADMIN - Boss")
-        return
-    keyboard = [
-        [InlineKeyboardButton("🇮🇳 INDIA - UPI", callback_data="country_india")],
-        [InlineKeyboardButton("🇧🇩 BANGLADESH - bKash/Nagad", callback_data="country_bd")]
-    ]
-    await update.message.reply_text("Please select your country to continue:", reply_markup=InlineKeyboardMarkup(keyboard))
+    # Fix Welcome Back - show INDIA every time if not selected
+    if user_id not in users or users[user_id].get("country") is None:
+        keyboard = [[InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Select your country:", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(f"Welcome Back! You selected {users[user_id]['country']}")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
-    if query.data.startswith("country_"):
-        country = "India" if query.data == "country_india" else "Bangladesh"
-        users[user_id] = {"country": country, "balance": 0.00}
-        save_users(users)
-        name = query.from_user.first_name
-        await query.edit_message_text(f"✅ Country set to {country}\n\n👑 Welcome to SHINIGAMI Bot!\n👤 Name: {name}\nPlan: 👑 ADMIN - Boss\n💰 Balance: ₹0.00\n🌍 Country: {country}")
+    country = query.data
+    users[user_id] = {"country": country}
+    save_users(users)
+    await query.edit_message_text(f"You selected {country} ✅\nBot is now active!")
 
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button))
-    app.run_polling()
+async def main():
+    threading.Thread(target=run_flask).start()
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
