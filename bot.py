@@ -3,7 +3,6 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-
 PLANS = {"1 Day": 30,"3 Day": 70,"7 Day": 150,"15 Day": 280,"30 Day": 500}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -18,7 +17,7 @@ async def handle_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if os.path.exists("qr.jpg"):
             await update.message.reply_photo(
                 photo=open("qr.jpg", 'rb'),
-                caption=f"✅ {text} - ₹{price}\n\n📱 UPI QR Scan karo payment ke liye\nPayment karke screenshot bhejo"
+                caption=f"✅ {text} - ₹{price}\n\n📱 UPI QR Scan karo payment ke liye\nPayment karke screenshot bhejo\n\n🇮🇳 Jio Payment - PhonePe"
             )
 
 def main():
