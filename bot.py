@@ -63,10 +63,6 @@ async def buttons_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "stock":
         await query.message.reply_text("📦 Stock: 125 Accounts Available ✅")
     elif query.data == "balance":
-        await query.message.reply_text(f"💰 Tomar Balance: ₹{bal:.2f}\n\nAdd Funds korte niche button chapo.", reply_markup=main_keyboard())
+        await query.message.reply_text(f"💰 Tomar Balance: ₹{bal:.2f}")
     elif query.data == "addfund":
-        await query.message.reply_text("💸 Add Funds:\n\n🇮🇳 UPI ID: tomar_upi@okaxis\n🇧🇩 bKash: 01XXXXXXXXX\n\nPay kore screenshot dao admin ke: @YourAdminUsername")
-    elif query.data == "getfiles":
-        await query.message.reply_text("📂 Get Files: Age kono plan keno!")
-    elif "buy" in query.data:
-       
+        await query.message.reply_text("💸 Add Funds:\n\n🇮🇳 UPI: tomar_upi@okaxis\n
