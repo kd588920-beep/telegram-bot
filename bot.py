@@ -27,7 +27,10 @@ def save_users(users):
 users = load_users()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")]]
+    keyboard = [
+        [InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")],
+        [InlineKeyboardButton("🇧🇩 BANGLADESH", callback_data="BANGLADESH")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Select your country:", reply_markup=reply_markup)
 
@@ -38,7 +41,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     country = query.data
     users[user_id] = {"country": country}
     save_users(users)
-    await query.edit_message_text(f"You selected {country}")
+    await query.edit_message_text(f"You selected {country} ✅")
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
