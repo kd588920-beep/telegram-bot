@@ -22,7 +22,6 @@ def load_users():
 def save_users(u):
     with open(DB_FILE, "w") as f: json.dump(u, f)
 users = load_users()
-
 PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹190","15 Days":"₹350","30 Days":"₹570"}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,13 +38,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users[user_id] = {"country":data,"name":name,"selected_plan":""}
         save_users(users)
         await query.edit_message_text(f"✅ Country set to {data}")
-        # SAM DESIGN - Exactly like your photo
         reply_keyboard = [
-            ["🔴 Buy 1 Days", "🔴 Buy 3 Days"],
-            ["🔴 Buy 7 Days", "🔴 Buy 15 Days"],
-            ["🔴 Buy 30 Days", "📦 Stock"],
-            ["➕ Add Funds", "💰 Balance"],
-            ["📄 Get Files"]
+            ["Buy 1 Days", "Buy 3 Days"],
+            ["Buy 7 Days", "Buy 15 Days"],
+            ["Buy 30 Days", "Stock"],
+            ["Add Funds", "Balance"],
+            ["Get Files"]
         ]
         await query.message.reply_text(
             f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n🥇 Plan: Bronze\n💰 Balance: ₹0.00\n🇮🇳 Country: India\n\n🚀 Select an option below to get started:",
@@ -58,29 +56,57 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in users:
         await start(update, context); return
     
+    # SAM FLOW: Buy -> Select Game -> CARROM + Cancel
     if "Buy" in text:
-        plan = text.replace("🔴 Buy ","").replace("Buy ","").strip()
+        plan = text.replace("Buy ","").strip()
         users[user_id]["selected_plan"] = plan
         save_users(users)
-        await update.message.reply_text(f"🎁 {plan} Selected\nPrice: {PRICES.get(plan,'₹70')}\n\n🎮 Game: CARROM DISC POOL\n\nPay korte QR pathacchi...")
+        # EKHANEI TOMAR SOBUJ MARK KORA DESIGN
+        game_keyboard = [
+            ["🎮 CARROM"],
+            ["❌ Cancel"]
+        ]
+        await update.message.reply_text(
+            f"🎁 {plan} Plan Selected\n\n🎮 Select a Game:",
+            reply_markup=ReplyKeyboardMarkup(game_keyboard, resize_keyboard=True)
+        )
+
+    elif "CARROM" in text:
+        plan = users[user_id].get("selected_plan","1 Days")
+        price = PRICES.get(plan,"₹70")
         try:
             with open("qr.jpg","rb") as qr:
-                await update.message.reply_photo(photo=qr, caption=f"🎮 CARROM DISC POOL\n🏷️ Plan: {plan}\n💰 Price: {PRICES.get(plan)}\n\n💳 UPI: {UPI_ID}\n\n1. QR scan koro\n2. Screenshot @Koushik e pathao")
+                await update.message.reply_photo(photo=qr, caption=f"🎮 CARROM DISC POOL\n🏷️ Plan: {plan}\n💰 Price: {price}\n\n💳 UPI ID: {UPI_ID}\n\nQR scan kore pay koro, screenshot @Koushik ke pathao")
         except:
-            await update.message.reply_text(f"Price: {PRICES.get(plan)} - UPI: {UPI_ID}")
+            await update.message.reply_text(f"CARROM {plan} Price: {price} UPI: {UPI_ID}")
+        # Payment er por abar main menu
+        reply_keyboard = [
+            ["Buy 1 Days", "Buy 3 Days"],
+            ["Buy 7 Days", "Buy 15 Days"],
+            ["Buy 30 Days", "Stock"],
+            ["Add Funds", "Balance"],
+            ["Get Files"]
+        ]
+        await update.message.reply_text("Payment koro 👆", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
 
-    elif "Stock" in text:
-        await update.message.reply_text("📦 Stock: CARROM Available ✅\n1 Days: 50 pcs\n3 Days: 30 pcs\n7 Days: 20 pcs")
+    elif "Cancel" in text or "❌" in text:
+        reply_keyboard = [
+            ["Buy 1 Days", "Buy 3 Days"],
+            ["Buy 7 Days", "Buy 15 Days"],
+            ["Buy 30 Days", "Stock"],
+            ["Add Funds", "Balance"],
+            ["Get Files"]
+        ]
+        await update.message.reply_text("❌ Cancelled. Main menu:", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
+
+    elif "Stock" in text: await update.message.reply_text("📦 Stock: CARROM Available ✅")
     elif "Add Funds" in text:
         try:
             with open("qr.jpg","rb") as qr:
-                await update.message.reply_photo(photo=qr, caption=f"💰 Add Funds\nUPI: {UPI_ID}\nQR scan kore pay koro")
-        except:
-            await update.message.reply_text("Add Funds - UPI: "+UPI_ID)
-    elif "Balance" in text:
-        await update.message.reply_text("💰 Your Balance: ₹0.00\nPlan: Bronze")
-    elif "Get Files" in text:
-        await update.message.reply_text("📄 Get Files:\nPayment er por file pabe. Admin @Koushik ke msg koro.")
+                await update.message.reply_photo(photo=qr, caption=f"💰 Add Funds UPI: {UPI_ID}")
+        except: await update.message.reply_text("UPI: "+UPI_ID)
+    elif "Balance" in text: await update.message.reply_text("💰 Balance: ₹0.00")
+    elif "Get Files" in text: await update.message.reply_text("📄 Payment er por file pabe. Admin @Koushik")
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
