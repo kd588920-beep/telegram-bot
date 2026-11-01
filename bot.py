@@ -4,30 +4,20 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-PLANS = {
-    "1 Day": 30,
-    "3 Day": 70,
-    "7 Day": 150,
-    "15 Day": 280,
-    "30 Day": 500
-}
+PLANS = {"1 Day": 30,"3 Day": 70,"7 Day": 150,"15 Day": 280,"30 Day": 500}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["1 Day", "3 Day"], ["7 Day", "15 Day"], ["30 Day"]]
+    keyboard = [["1 Day", "3 Day"],["7 Day", "15 Day"],["30 Day"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text(
-        "🔥 Koushik Gaming India 🔥\nNiche se plan select karo:",
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text("🔥 Koushik Gaming India 🔥\nNiche se plan select karo:", reply_markup=reply_markup)
 
 async def handle_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text in PLANS:
         price = PLANS[text]
-        qr_path = "qr.jpg"
-        if os.path.exists(qr_path):
+        if os.path.exists("qr.jpg"):
             await update.message.reply_photo(
-                photo=open(qr_path, 'rb'),
+                photo=open("qr.jpg", 'rb'),
                 caption=f"✅ {text} - ₹{price}\n\n📱 UPI QR Scan karo payment ke liye\nPayment karke screenshot bhejo"
             )
 
