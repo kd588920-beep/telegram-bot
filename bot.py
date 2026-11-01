@@ -23,7 +23,15 @@ def save_stock():
     with open(STOCK_FILE, 'w') as f: json.dump(stock, f)
 
 def get_stock_text():
-    return f"📦 Total Stock:\n1D: {len(stock['1D'])} | 3D: {len(stock['3D'])} | 7D: {len(stock['7D'])} | 15D: {len(stock['15D'])} | 30D: {len(stock['30D'])}"
+    return f"""📦 𝗧𝗢𝗧𝗔𝗟 𝗦𝗧𝗢𝗖𝗞 📦
+━━━━━━━━━━━━━━━━━━
+🔥 1 Days  : {len(stock['1D'])} Keys
+🔥 3 Days  : {len(stock['3D'])} Keys
+🔥 7 Days  : {len(stock['7D'])} Keys
+🔥 15 Days : {len(stock['15D'])} Keys
+🔥 30 Days : {len(stock['30D'])} Keys
+━━━━━━━━━━━━━━━━━━
+✨ Bot: Koushik Gaming"""
 
 user_state = {}
 
@@ -81,18 +89,12 @@ def buy_handler(message):
     elif "15 Days" in message.text: plan="15D"
     elif "30 Days" in message.text: plan="30D"
     else: return
-    
     if len(stock[plan]) == 0:
-        bot.send_message(message.chat.id, f"❌ {plan} Stock Out! Admin ke bolo add korte.")
+        bot.send_message(message.chat.id, f"❌ {plan} Stock Out!", reply_markup=main_keyboard())
         return
-
     price = PRICE[plan]
-    text = f"🎯 {plan.replace('D','')} Days Plan - CARROM\n💰 Price: ₹{price}\n🏦 UPI: {UPI_ID}\n\n📲 QR scan kore pay koro\nPayment er screenshot pathao!"
+    text = f"🎯 {plan.replace('D','')} Days Plan - CARROM\n💰 Price: ₹{price}\n🏦 UPI: {UPI_ID}\n\n📲 QR scan kore pay koro"
     bot.send_message(message.chat.id, text, reply_markup=main_keyboard())
-    # Auto key dewar jonno test - real e payment verify er por debe
-    # key = stock[plan].pop(0)
-    # save_stock()
-    # bot.send_message(message.chat.id, f"🔑 Tomar Key: `{key}`", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text == "📦 Stock")
 def stock_handler(message):
