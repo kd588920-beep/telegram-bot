@@ -63,7 +63,11 @@ async def country_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else: db[user_id]["country"] = "Bangladesh"
     save_db(db)
     bal = db[user_id]['balance']
-    plan = db[user_id]['plan']
+    # ADMIN CHECK - TUMI ADMIN
+    if user_id == str(ADMIN_ID):
+        plan = "👑 ADMIN - Boss"
+    else:
+        plan = db[user_id]['plan']
     country = db[user_id]['country']
     text = f"✅ Country set to {country} {'🇮🇳' if country=='India' else '🇧🇩'}\n\n💰 Prices shown in {'₹ (INR)' if country=='India' else '৳ (BDT)'}\n💳 Payments via {'UPI (auto-verify)' if country=='India' else 'bKash / Nagad'}\n\n👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n🏅 Plan: {plan}\n💰 Balance: ₹{bal:.2f}\n🌍 Country: {country}\n\n🚀 Select an option below to get started:"
     await q.message.reply_text(text, reply_markup=main_keyboard())
