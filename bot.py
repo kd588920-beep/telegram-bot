@@ -1,58 +1,55 @@
-import os
-from telegram import InlineKeyboardButton,InlineKeyboardMarkup,ReplyKeyboardMarkup
-from telegram.ext import Application,CommandHandler,CallbackQueryHandler,MessageHandler,filters
+import json, os
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-BOT_TOKEN=os.getenv("BOT_TOKEN")
-DB={}
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+DB_FILE = "users.json"
 
-def main_kb():
-    return ReplyKeyboardMarkup([
-        ["🔥 Buy 1 Days","🔥 Buy 3 Days"],
-        ["🔥 Buy 7 Days","🔥 Buy 15 Days"],
-        ["🔥 Buy 30 Days","📦 Stock"],
-        ["➕ Add Funds","💰 Balance"],
-        ["📂 Get Files"]], resize_keyboard=True)
+def load_users():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
 
-async def start(update,context):
-    u=str(update.effective_user.id)
-    if u in DB and "country" in DB[u]:
-        await update.message.reply_text(f"👑 Welcome Back!\n🌍 {DB[u]['country']}\n💰 ₹{DB[u].get('balance',0)}", reply_markup=main_kb())
-    else:
-        k=[[InlineKeyboardButton("🇮🇳 INDIA - UPI",callback_data="in")],[InlineKeyboardButton("🇧🇩 BANGLADESH",callback_data="bd")]]
-        await update.message.reply_text("Please select your country:", reply_markup=InlineKeyboardMarkup(k))
+def save_users(users):
+    with open(DB_FILE, "w") as f:
+        json.dump(users, f)
 
-async def country(update,context):
-    q=update.callback_query
-    u=str(q.from_user.id)
-    await q.answer()
-    if u not in DB: DB[u]={"balance":0,"plan":"Bronze"}
-    if u=="7189081595": DB[u]["plan"]="ADMIN - Boss"
-    DB[u]["country"]="India" if q.data=="in" else "Bangladesh"
-    await q.edit_message_text(f"✅ Country set to {DB[u]['country']}")
-    await context.bot.send_message(chat_id=q.message.chat_id, text=f"👑 Welcome! Use menu below:", reply_markup=main_kb())
+users = load_users()
 
-async def buttons(update,context):
-    q=update.callback_query
-    if q:
-        await q.answer()
-        if q.data=="stock": await q.message.reply_text("📦 Stock: 125 Accounts ✅")
-        elif q.data=="balance": 
-            bal=DB.get(str(q.from_user.id),{}).get("balance",0)
-            await q.message.reply_text(f"💰 Balance: ₹{bal}")
-        else: await q.message.reply_text("🛒 Add Funds koro!")
-    else:
-        txt=update.message.text
-        bal=DB.get(str(update.effective_user.id),{}).get("balance",0)
-        if "Stock" in txt: await update.message.reply_text("📦 Stock: 125 Accounts ✅")
-        elif "Balance" in txt: await update.message.reply_text(f"💰 Balance: ₹{bal}")
-        else: await update.message.reply_text("🛒 Buy korte Add Funds koro!")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+    if user_id in users:
+        country = users[user_id].get("country", "India")
+        balance = users[user_id].get("balance", 0)
+        name = update.effective_user.first_name
+        await update.message.reply_text(f"👑 Welcome Back! 🌍 {country} 💰 ₹{balance}\n\n👤 Name: {name}\nPlan: 👑 ADMIN - Boss")
+        return
+    keyboard = [
+        [InlineKeyboardButton("🇮🇳 INDIA - UPI", callback_data="country_india")],
+        [InlineKeyboardButton("🇧🇩 BANGLADESH - bKash/Nagad", callback_data="country_bd")]
+    ]
+    await update.message.reply_text("Please select your country to continue:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-def run():
-    app=Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start",start))
-    app.add_handler(CallbackQueryHandler(country,pattern="^(in|bd)$"))
-    app.add_handler(CallbackQueryHandler(buttons,pattern="^(buy1|buy3|buy7|buy15|buy30|stock|addfund|balance|getfiles)$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, buttons))
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = str(query.from_user.id)
+    if query.data.startswith("country_"):
+        country = "India" if query.data == "country_india" else "Bangladesh"
+        users[user_id] = {"country": country, "balance": 0.00}
+        save_users(users)
+        name = query.from_user.first_name
+        await query.edit_message_text(f"✅ Country set to {country}\n\n👑 Welcome to SHINIGAMI Bot!\n👤 Name: {name}\nPlan: 👑 ADMIN - Boss\n💰 Balance: ₹0.00\n🌍 Country: {country}")
+
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button))
     app.run_polling()
 
-if __name__=="__main__": run()
+if __name__ == "__main__":
+    main()
