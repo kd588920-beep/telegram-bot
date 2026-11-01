@@ -9,17 +9,20 @@ web = Flask(__name__)
 
 @web.route('/')
 def home():
-    return "Bot Live!"
+    return "Bot is Live!"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔥 Bot Live! Kaj korche!")
+    await update.message.reply_text("🔥 Bot Live Hai! /start kaam kar raha hai")
 
 async def run_bot_async():
     token = os.environ.get("BOT_TOKEN")
+    print(f"Token found: {bool(token)}")
     if not token:
+        print("ERROR: BOT_TOKEN not found!")
         return
     bot_app = Application.builder().token(token).build()
     bot_app.add_handler(CommandHandler("start", start))
+    print("Bot Started Polling...")
     await bot_app.run_polling()
 
 def run_bot():
