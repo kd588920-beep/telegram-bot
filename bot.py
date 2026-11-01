@@ -4,12 +4,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 QR_FILE_ID = os.getenv("QR_FILE_ID")
-
 PLANS = {"1 Day": 30, "3 Day": 70, "7 Day": 120, "15 Day": 200, "30 Day": 350}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["1 Day", "3 Day"], ["7 Day", "15 Day"], ["30 Day"]]
-    await update.message.reply_text("🔥 Koushik Gaming - Plan Select Karo:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+    await update.message.reply_text("🔥 Koushik Gaming India 🔥\nNiche theke plan select koro:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
 async def handle_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
