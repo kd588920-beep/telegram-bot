@@ -6,8 +6,7 @@ import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_FILE = "users.json"
-UPI_ID = "koushik@upi"  # <-- Ekhane tomar UPI ID bosao
-YOUR_TELEGRAM = "@Koushik" 
+UPI_ID = "koushik@upi"
 
 app = Flask(__name__)
 @app.route('/')
@@ -20,24 +19,14 @@ def load_users():
             with open(DB_FILE, "r") as f: return json.load(f)
         except: return {}
     return {}
-def save_users(users):
-    with open(DB_FILE, "w") as f: json.dump(users, f)
+def save_users(u):
+    with open(DB_FILE, "w") as f: json.dump(u, f)
 users = load_users()
 
-# --- TOMAR FINAL PRICE ---
-PRICES = {
-    "1 Days": "₹70",
-    "3 Days": "₹140",
-    "7 Days": "₹190",
-    "15 Days": "₹350",
-    "30 Days": "₹570"
-}
+PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹190","15 Days":"₹350","30 Days":"₹570"}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🇮🇳 India - Pay via UPI", callback_data="INDIA")],
-        [InlineKeyboardButton("🇧🇩 Bangladesh - bKash", callback_data="BANGLADESH")]
-    ]
+    keyboard = [[InlineKeyboardButton("🇮🇳 India - Pay via UPI", callback_data="INDIA")],[InlineKeyboardButton("🇧🇩 Bangladesh - bKash", callback_data="BANGLADESH")]]
     await update.message.reply_text("🌍 Select Your Country", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -46,17 +35,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     data = query.data
     name = query.from_user.first_name
-    if data in ["INDIA", "BANGLADESH"]:
-        users[user_id] = {"country": data, "name": name, "selected_plan": ""}
+    if data in ["INDIA","BANGLADESH"]:
+        users[user_id] = {"country":data,"name":name,"selected_plan":""}
         save_users(users)
-        await query.edit_message_text(f"✅ Country set to {data} {'🇮🇳' if data=='INDIA' else '🇧🇩'}\n💰 Prices in ₹\n💳 Payments via UPI")
+        await query.edit_message_text(f"✅ Country set to {data}")
+        # SAM DESIGN - Exactly like your photo
         reply_keyboard = [
-            ["Buy 1 Days - ₹70", "Buy 3 Days - ₹140"],
-            ["Buy 7 Days - ₹190", "Buy 15 Days - ₹350"],
-            ["Buy 30 Days - ₹570", "My Balance"]
+            ["🔴 Buy 1 Days", "🔴 Buy 3 Days"],
+            ["🔴 Buy 7 Days", "🔴 Buy 15 Days"],
+            ["🔴 Buy 30 Days", "📦 Stock"],
+            ["➕ Add Funds", "💰 Balance"],
+            ["📄 Get Files"]
         ]
         await query.message.reply_text(
-            f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n❤️‍🔥 Plan: Bronze\n💰 Balance: ₹0.00\n🌍 Country: {data}\n\n🚀 Select an option below:",
+            f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n🥇 Plan: Bronze\n💰 Balance: ₹0.00\n🇮🇳 Country: India\n\n🚀 Select an option below to get started:",
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
         )
 
@@ -67,26 +59,28 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context); return
     
     if "Buy" in text:
-        # Extract plan like "1 Days" from "Buy 1 Days - ₹70"
-        plan = text.split(" - ")[0].replace("Buy ", "")
+        plan = text.replace("🔴 Buy ","").replace("Buy ","").strip()
         users[user_id]["selected_plan"] = plan
         save_users(users)
-        game_keyboard = [["🎮 CARROM"], ["❌ Cancel"]]
-        await update.message.reply_text(f"🎁 {plan} Plan Selected\nPrice: {PRICES.get(plan)}\n\n🎮 Select a Game:", reply_markup=ReplyKeyboardMarkup(game_keyboard, resize_keyboard=True))
-    
-    elif "CARROM" in text:
-        plan = users[user_id].get("selected_plan", "1 Days")
-        price = PRICES.get(plan, "₹70")
-        caption = f"🎮 CARROM DISC POOL\n\n📦 Plan: {plan}\n💰 Price: {price}\n\n💳 UPI ID: {UPI_ID}\n\n👉 {price} Pay Now\n1. QR scan koro\n2. Screenshot {YOUR_TELEGRAM} e pathao\n3. Instant delivery!"
+        await update.message.reply_text(f"🎁 {plan} Selected\nPrice: {PRICES.get(plan,'₹70')}\n\n🎮 Game: CARROM DISC POOL\n\nPay korte QR pathacchi...")
         try:
-            with open("qr.jpg", "rb") as qr_file:
-                await update.message.reply_photo(photo=qr_file, caption=caption)
+            with open("qr.jpg","rb") as qr:
+                await update.message.reply_photo(photo=qr, caption=f"🎮 CARROM DISC POOL\n🏷️ Plan: {plan}\n💰 Price: {PRICES.get(plan)}\n\n💳 UPI: {UPI_ID}\n\n1. QR scan koro\n2. Screenshot @Koushik e pathao")
         except:
-            await update.message.reply_text(caption)
-    
-    elif "Cancel" in text:
-        reply_keyboard = [["Buy 1 Days - ₹70", "Buy 3 Days - ₹140"], ["Buy 7 Days - ₹190", "Buy 15 Days - ₹350"], ["Buy 30 Days - ₹570"]]
-        await update.message.reply_text("Cancelled. Select again:", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
+            await update.message.reply_text(f"Price: {PRICES.get(plan)} - UPI: {UPI_ID}")
+
+    elif "Stock" in text:
+        await update.message.reply_text("📦 Stock: CARROM Available ✅\n1 Days: 50 pcs\n3 Days: 30 pcs\n7 Days: 20 pcs")
+    elif "Add Funds" in text:
+        try:
+            with open("qr.jpg","rb") as qr:
+                await update.message.reply_photo(photo=qr, caption=f"💰 Add Funds\nUPI: {UPI_ID}\nQR scan kore pay koro")
+        except:
+            await update.message.reply_text("Add Funds - UPI: "+UPI_ID)
+    elif "Balance" in text:
+        await update.message.reply_text("💰 Your Balance: ₹0.00\nPlan: Bronze")
+    elif "Get Files" in text:
+        await update.message.reply_text("📄 Get Files:\nPayment er por file pabe. Admin @Koushik ke msg koro.")
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
@@ -99,5 +93,5 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     application.run_polling(drop_pending_updates=True, stop_signals=None)
 
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
