@@ -3,9 +3,9 @@ from flask import Flask
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 TOKEN="928125293:AAH4v8xKhuZgm2x5nKo-XMPAh9m4QlUti8"
 app=Flask(__name__)
-@ app.route('/')
 def home():
  return "Bot LIVE"
+app.add_url_rule('/', 'home', home)
 async def start(update, context):
  await update.message.reply_text("Bot Chalu! 24h LIVE")
 async def buy(update, context):
@@ -20,4 +20,3 @@ def run_bot():
 if __name__=="__main__":
  threading.Thread(target=run_flask, daemon=True).start()
  run_bot()
- 
