@@ -6,6 +6,8 @@ import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_FILE = "users.json"
+UPI_ID = "koushik@upi"  # <-- Ekhane tomar UPI ID bosao
+YOUR_TELEGRAM = "@Koushik" 
 
 app = Flask(__name__)
 @app.route('/')
@@ -22,19 +24,21 @@ def save_users(users):
     with open(DB_FILE, "w") as f: json.dump(users, f)
 users = load_users()
 
-# --- TUMI EKHANE PRICE CHANGE KORTE PARBE ---
-UPI_ID = "koushik@upi"  # Tomar UPI ID ekhane bosao
-YOUR_TELEGRAM = "@Koushik" # Tomar Telegram username
+# --- TOMAR FINAL PRICE ---
+PRICES = {
+    "1 Days": "₹70",
+    "3 Days": "₹140",
+    "7 Days": "₹190",
+    "15 Days": "₹350",
+    "30 Days": "₹570"
+}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🇮🇳 India - Pay via UPI", callback_data="INDIA")],
-        [InlineKeyboardButton("🇧🇩 Bangladesh - Pay via bKash / Nagad", callback_data="BANGLADESH")]
+        [InlineKeyboardButton("🇧🇩 Bangladesh - bKash", callback_data="BANGLADESH")]
     ]
-    await update.message.reply_text(
-        "🌍 Select Your Country\n\nPlease select your country to continue:\n🇮🇳 India - Pay via UPI\n🇧🇩 Bangladesh - Pay via bKash / Nagad",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await update.message.reply_text("🌍 Select Your Country", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -42,71 +46,46 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     data = query.data
     name = query.from_user.first_name
-
     if data in ["INDIA", "BANGLADESH"]:
-        country = data
-        users[user_id] = {"country": country, "name": name, "plan": "Bronze", "balance": "₹0.00", "selected_plan": ""}
+        users[user_id] = {"country": data, "name": name, "selected_plan": ""}
         save_users(users)
-
-        currency_text = "Prices shown in ₹ (INR)" if country == "INDIA" else "Prices shown in ৳ (BDT)"
-        pay_text = "Payments via UPI (auto-verify)" if country == "INDIA" else "Payments via bKash / Nagad"
-
-        await query.edit_message_text(f"✅ Country set to {country} {'🇮🇳' if country=='INDIA' else '🇧🇩'}\n\n💰 {currency_text}\n💳 {pay_text}")
-
-        # Welcome + Plan selection with BIG Reply Keyboard like Shinigami
+        await query.edit_message_text(f"✅ Country set to {data} {'🇮🇳' if data=='INDIA' else '🇧🇩'}\n💰 Prices in ₹\n💳 Payments via UPI")
         reply_keyboard = [
-            ["Buy 1 Days", "Buy 7 Days"],
-            ["Buy 30 Days", "My Balance"]
+            ["Buy 1 Days - ₹70", "Buy 3 Days - ₹140"],
+            ["Buy 7 Days - ₹190", "Buy 15 Days - ₹350"],
+            ["Buy 30 Days - ₹570", "My Balance"]
         ]
         await query.message.reply_text(
-            f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n❤️‍🔥 Plan: Bronze\n💰 Balance: ₹0.00\n🌍 Country: {country}\n\n🚀 Select an option below to get started:",
+            f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n❤️‍🔥 Plan: Bronze\n💰 Balance: ₹0.00\n🌍 Country: {data}\n\n🚀 Select an option below:",
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
         )
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     text = update.message.text
-    name = update.effective_user.first_name
-    
     if user_id not in users:
-        await start(update, context)
-        return
-
-    country = users[user_id].get("country", "INDIA")
-
-    if text.startswith("Buy"):
-        # Day Select -> Game Option (Tomar cheyechile eta)
-        users[user_id]["selected_plan"] = text
+        await start(update, context); return
+    
+    if "Buy" in text:
+        # Extract plan like "1 Days" from "Buy 1 Days - ₹70"
+        plan = text.split(" - ")[0].replace("Buy ", "")
+        users[user_id]["selected_plan"] = plan
         save_users(users)
-        
-        game_keyboard = [
-            ["🎮 CARROM"],
-            ["🎮 Free Fire", "🎮 8 Ball Pool"],
-            ["❌ Cancel"]
-        ]
-        await update.message.reply_text(
-            f"🎁 {text} Plan Selected\n\n🎮 Select a Game:",
-            reply_markup=ReplyKeyboardMarkup(game_keyboard, resize_keyboard=True)
-        )
-
+        game_keyboard = [["🎮 CARROM"], ["❌ Cancel"]]
+        await update.message.reply_text(f"🎁 {plan} Plan Selected\nPrice: {PRICES.get(plan)}\n\n🎮 Select a Game:", reply_markup=ReplyKeyboardMarkup(game_keyboard, resize_keyboard=True))
+    
     elif "CARROM" in text:
         plan = users[user_id].get("selected_plan", "1 Days")
-        await update.message.reply_text(
-            f"🎮 CARROM DISC POOL\n\n📦 Plan: {plan}\n💰 Price: ₹99 for {plan}\n\n💳 UPI ID: {UPI_ID}\n\n1. UPI te payment koro\n2. Screenshot pathao {YOUR_TELEGRAM} e\n3. Auto delivery peye jabe\n\n",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ I Paid", callback_data="PAID")]])
-        )
+        price = PRICES.get(plan, "₹70")
+        caption = f"🎮 CARROM DISC POOL\n\n📦 Plan: {plan}\n💰 Price: {price}\n\n💳 UPI ID: {UPI_ID}\n\n👉 {price} Pay Now\n1. QR scan koro\n2. Screenshot {YOUR_TELEGRAM} e pathao\n3. Instant delivery!"
+        try:
+            with open("qr.jpg", "rb") as qr_file:
+                await update.message.reply_photo(photo=qr_file, caption=caption)
+        except:
+            await update.message.reply_text(caption)
     
-    elif "Free Fire" in text:
-        await update.message.reply_text("🔥 Free Fire - Diamond list coming soon... Contact admin")
-    
-    elif "8 Ball Pool" in text:
-        await update.message.reply_text("🎱 8 Ball Pool - Coins list coming soon... Contact admin")
-
     elif "Cancel" in text:
-        reply_keyboard = [
-            ["Buy 1 Days", "Buy 7 Days"],
-            ["Buy 30 Days", "My Balance"]
-        ]
+        reply_keyboard = [["Buy 1 Days - ₹70", "Buy 3 Days - ₹140"], ["Buy 7 Days - ₹190", "Buy 15 Days - ₹350"], ["Buy 30 Days - ₹570"]]
         await update.message.reply_text("Cancelled. Select again:", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
 
 async def post_init(application):
