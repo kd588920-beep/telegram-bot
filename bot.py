@@ -1,17 +1,17 @@
 import json, os
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from flask import Flask
 import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_FILE = "users.json"
-UPI_ID = "koushik@upi"
+UPI_ID = "Jio Payments - 2754"
 
 app = Flask(__name__)
 @app.route('/')
 def home(): return "Bot is Live!"
-def run_flask(): app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+def run_flask(): app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
 def load_users():
     if os.path.exists(DB_FILE):
@@ -19,105 +19,50 @@ def load_users():
             with open(DB_FILE, "r") as f: return json.load(f)
         except: return {}
     return {}
+
 def save_users(u):
     with open(DB_FILE, "w") as f: json.dump(u, f)
+
 users = load_users()
-PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹190","15 Days":"₹350","30 Days":"₹570"}
+PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹200","30 Days":"₹500"}
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🇮🇳 India - Pay via UPI", callback_data="INDIA")],[InlineKeyboardButton("🇧🇩 Bangladesh - bKash", callback_data="BANGLADESH")]]
-    await update.message.reply_text("🌍 Select Your Country", reply_markup=InlineKeyboardMarkup(keyboard))
+async def start(update, context):
+    keyboard = [
+        [InlineKeyboardButton("🎮 Carrom Pool", callback_data="game_Carrom Pool")],
+        [InlineKeyboardButton("🎮 8 Ball Pool", callback_data="game_8 Ball Pool")],
+    ]
+    await update.message.reply_text("Game Select Koro:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button_handler(update, context):
     query = update.callback_query
     await query.answer()
-    user_id = str(query.from_user.id)
     data = query.data
-    name = query.from_user.first_name
-    if data in ["INDIA","BANGLADESH"]:
-        users[user_id] = {"country":data,"name":name,"selected_plan":""}
-        save_users(users)
-        await query.edit_message_text(f"✅ Country set to {data}")
-        reply_keyboard = [
-            ["Buy 1 Days", "Buy 3 Days"],
-            ["Buy 7 Days", "Buy 15 Days"],
-            ["Buy 30 Days", "Stock"],
-            ["Add Funds", "Balance"],
-            ["Get Files"]
-        ]
-        await query.message.reply_text(
-            f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {name}\n🥇 Plan: Bronze\n💰 Balance: ₹0.00\n🇮🇳 Country: India\n\n🚀 Select an option below to get started:",
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-        )
 
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    text = update.message.text
-    if user_id not in users:
-        await start(update, context); return
+    if data.startswith("game_"):
+        game_name = data.split("_",1)[1]
+        keyboard = [
+            [InlineKeyboardButton(f"{k} - {v}", callback_data=f"plan_{game_name}_{k}_{v}") for k,v in list(PRICES.items())[:2]],
+            [InlineKeyboardButton(f"{k} - {v}", callback_data=f"plan_{game_name}_{k}_{v}") for k,v in list(PRICES.items())[2:]]
+        ]
+        await query.edit_message_text(f"{game_name} er jonno Plan Select Koro:", reply_markup=InlineKeyboardMarkup(keyboard))
     
-    # SAM FLOW: Buy -> Select Game -> CARROM + Cancel
-    if "Buy" in text:
-        plan = text.replace("Buy ","").strip()
-        users[user_id]["selected_plan"] = plan
-        save_users(users)
-        # EKHANEI TOMAR SOBUJ MARK KORA DESIGN
-        game_keyboard = [
-            ["🎮 CARROM"],
-            ["❌ Cancel"]
-        ]
-        await update.message.reply_text(
-            f"🎁 {plan} Plan Selected\n\n🎮 Select a Game:",
-            reply_markup=ReplyKeyboardMarkup(game_keyboard, resize_keyboard=True)
+    elif data.startswith("plan_"):
+        _, game_name, plan, price = data.split("_",3)
+        caption = (
+            f"🎮 {game_name}\n"
+            f"📦 Plan: {plan}\n"
+            f"💰 Price: {price}\n\n"
+            f"💳 UPI ID: {UPI_ID}\n\n"
+            f"📲 QR scan kore payment koro"
         )
-
-    elif "CARROM" in text:
-        plan = users[user_id].get("selected_plan","1 Days")
-        price = PRICES.get(plan,"₹70")
-        try:
-            with open("qr.jpg","rb") as qr:
-                await update.message.reply_photo(photo=qr, caption=f"🎮 CARROM DISC POOL\n🏷️ Plan: {plan}\n💰 Price: {price}\n\n💳 UPI ID: {UPI_ID}\n\nQR scan kore pay koro, screenshot @Koushik ke pathao")
-        except:
-            await update.message.reply_text(f"CARROM {plan} Price: {price} UPI: {UPI_ID}")
-        # Payment er por abar main menu
-        reply_keyboard = [
-            ["Buy 1 Days", "Buy 3 Days"],
-            ["Buy 7 Days", "Buy 15 Days"],
-            ["Buy 30 Days", "Stock"],
-            ["Add Funds", "Balance"],
-            ["Get Files"]
-        ]
-        await update.message.reply_text("Payment koro 👆", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
-
-    elif "Cancel" in text or "❌" in text:
-        reply_keyboard = [
-            ["Buy 1 Days", "Buy 3 Days"],
-            ["Buy 7 Days", "Buy 15 Days"],
-            ["Buy 30 Days", "Stock"],
-            ["Add Funds", "Balance"],
-            ["Get Files"]
-        ]
-        await update.message.reply_text("❌ Cancelled. Main menu:", reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True))
-
-    elif "Stock" in text: await update.message.reply_text("📦 Stock: CARROM Available ✅")
-    elif "Add Funds" in text:
-        try:
-            with open("qr.jpg","rb") as qr:
-                await update.message.reply_photo(photo=qr, caption=f"💰 Add Funds UPI: {UPI_ID}")
-        except: await update.message.reply_text("UPI: "+UPI_ID)
-    elif "Balance" in text: await update.message.reply_text("💰 Balance: ₹0.00")
-    elif "Get Files" in text: await update.message.reply_text("📄 Payment er por file pabe. Admin @Koushik")
-
-async def post_init(application):
-    await application.bot.delete_webhook(drop_pending_updates=True)
+        await query.message.reply_photo(photo=open("qr.jpg", "rb"), caption=caption)
 
 def main():
     threading.Thread(target=run_flask).start()
-    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    application.run_polling(drop_pending_updates=True, stop_signals=None)
+    app_builder = Application.builder().token(BOT_TOKEN).build()
+    app_builder.add_handler(CommandHandler("start", start))
+    app_builder.add_handler(CallbackQueryHandler(button_handler))
+    app_builder.run_polling()
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
