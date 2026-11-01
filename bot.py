@@ -3,22 +3,21 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-PLANS = {"1 Day": 30,"3 Day": 70,"7 Day": 150,"15 Day": 280,"30 Day": 500}
+QR_FILE_ID = os.getenv("QR_FILE_ID")
+
+PLANS = {"1 Day": 30, "3 Day": 70, "7 Day": 120, "15 Day": 200, "30 Day": 350}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["1 Day", "3 Day"],["7 Day", "15 Day"],["30 Day"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("🔥 Koushik Gaming India 🔥\nNiche se plan select karo:", reply_markup=reply_markup)
+    keyboard = [["1 Day", "3 Day"], ["7 Day", "15 Day"], ["30 Day"]]
+    await update.message.reply_text("🔥 Koushik Gaming - Plan Select Karo:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
 async def handle_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    if text in PLANS:
-        price = PLANS[text]
-        if os.path.exists("qr.jpg"):
-            await update.message.reply_photo(
-                photo=open("qr.jpg", 'rb'),
-                caption=f"✅ {text} - ₹{price}\n\n📱 UPI QR Scan karo payment ke liye\nPayment karke screenshot bhejo\n\n🇮🇳 Jio Payment - PhonePe"
-            )
+    if text not in PLANS:
+        return
+    price = PLANS[text]
+    caption = f"✅ {text} - ₹{price}\n\n📱 UPI QR Scan karo payment ke liye\nPayment karke screenshot bhejo\n\n🇮🇳 Jio Payment - PhonePe"
+    await context.bot.send_photo(chat_id=update.effective_chat.id, photo=QR_FILE_ID, caption=caption)
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
