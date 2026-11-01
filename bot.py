@@ -28,13 +28,11 @@ def get_stock_text():
 
 user_state = {}
 
-@bot.message_handler(commands=['cancel'])
+@bot.message_handler(commands=['cancel', 'Cancel', 'CANCEL'])
 def cancel_handle(message):
     if message.from_user.id in user_state:
         user_state.pop(message.from_user.id)
-        bot.send_message(message.chat.id, "❌ Cancelled! State clear hoye geche.\nEbar /admin likho.")
-    else:
-        bot.send_message(message.chat.id, "Kichu cancel korar nei.")
+    bot.send_message(message.chat.id, "❌ Cancelled! State clear hoye geche.", reply_markup=types.ReplyKeyboardRemove())
 
 @bot.message_handler(commands=['admin'])
 def admin_panel(message):
@@ -47,14 +45,14 @@ def admin_panel(message):
         types.InlineKeyboardButton("✅ 15D Add", callback_data="add_15D"),
         types.InlineKeyboardButton("✅ 30D Add", callback_data="add_30D"),
     )
-    bot.send_message(message.chat.id, f"{get_stock_text()}\n\n👇 Konta add korbe?\nCancel korte /cancel likho", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"{get_stock_text()}\n\n👇 Konta add korbe?\nCancel: /cancel", reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("add_"))
 def ask_keys(call):
     plan = call.data.split("_")[1]
     user_state[call.from_user.id] = plan
     bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, f"🔑 {plan} er key paste koro\nCancel korte /cancel likho.")
+    bot.send_message(call.message.chat.id, f"🔑 {plan} er key paste koro\nCancel: /cancel")
 
 @bot.message_handler(func=lambda m: m.from_user.id in user_state)
 def save_keys(message):
