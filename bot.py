@@ -33,13 +33,13 @@ users = load_users()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    # Fix Welcome Back - show INDIA every time if not selected
-    if user_id not in users or users[user_id].get("country") is None:
+    # Fix Welcome Back - show INDIA every time
+    if user_id not in users or users[user_id]:
         keyboard = [[InlineKeyboardButton("🇮🇳 INDIA", callback_data="INDIA")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Select your country:", reply_markup=reply_markup)
     else:
-        await update.message.reply_text(f"Welcome Back! You selected {users[user_id]['country']}")
+        await update.message.reply_text(f"Welcome back {users[user_id]['country']}!")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -48,15 +48,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     country = query.data
     users[user_id] = {"country": country}
     save_users(users)
-    await query.edit_message_text(f"You selected {country} ✅\nBot is now active!")
+    await query.edit_message_text(f"You selected {country}")
 
-async def main():
+def main():
+    # Start Flask in background
     threading.Thread(target=run_flask).start()
+    
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
-    await application.run_polling()
+    
+    # This fixes the Render error
+    application.run_polling(stop_signals=None)
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
