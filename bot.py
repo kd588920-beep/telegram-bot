@@ -12,7 +12,7 @@ app = Flask(__name__)
 def home(): return "Bot Live"
 def run_flask(): app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
-PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹200","15 Days":"₹350","30 Days":"₹500"}
+PRICES = {"1 Days":"₹70","3 Days":"₹140","7 Days":"₹190","15 Days":"₹350","30 Days":"₹570"}
 
 def get_main_menu():
     keyboard = [
