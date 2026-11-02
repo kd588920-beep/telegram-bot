@@ -21,33 +21,20 @@ def country_kb():
     return m
 
 def main_kb():
-    # Tomar chaoa logo add kora holo
-    m=types.InlineKeyboardMarkup(row_width=2)
-    m.add(
-        types.InlineKeyboardButton("🩸 Buy 1 Days", callback_data="buy_1D"),
-        types.InlineKeyboardButton("🩸 Buy 3 Days", callback_data="buy_3D")
-    )
-    m.add(
-        types.InlineKeyboardButton("🩸 Buy 7 Days", callback_data="buy_7D"),
-        types.InlineKeyboardButton("🩸 Buy 15 Days", callback_data="buy_15D")
-    )
-    m.add(
-        types.InlineKeyboardButton("🩸 Buy 30 Days", callback_data="buy_30D"),
-        types.InlineKeyboardButton("📦 Stock", callback_data="stock")
-    )
-    m.add(types.InlineKeyboardButton("➕ Add Funds", callback_data="addfunds"), types.InlineKeyboardButton("💰 Balance", callback_data="bal"))
-    m.add(types.InlineKeyboardButton("📁 Get Files", callback_data="getfiles"))
+    # Ebar sudhu niche 1 ta set thakbe - uporer ta delete
+    m=types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    m.add(types.KeyboardButton("🩸 Buy 1 Days"), types.KeyboardButton("🩸 Buy 3 Days"))
+    m.add(types.KeyboardButton("🩸 Buy 7 Days"), types.KeyboardButton("🩸 Buy 15 Days"))
+    m.add(types.KeyboardButton("🩸 Buy 30 Days"), types.KeyboardButton("📦 Stock"))
+    m.add(types.KeyboardButton("➕ Add Funds"), types.KeyboardButton("💰 Balance"))
+    m.add(types.KeyboardButton("📁 Get Files"))
     return m
 
 def welcome(m):
     bal=user_balance.get(m.from_user.id,0.00)
     country=user_country.get(m.from_user.id,"India")
     flag="🇮🇳" if country=="India" else "🇧🇩"
-    # Admin hole VIP dekhabe
-    if m.from_user.id == ADMIN_ID:
-        plan = "Vip 👑 VIP/Reseller"
-    else:
-        plan = "Bronze"
+    plan="Vip 👑 VIP/Reseller" if m.from_user.id==ADMIN_ID else "Bronze"
     return f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {m.from_user.first_name}\n👑 Plan: {plan}\n💰 Balance: ₹{bal:.2f}\n{flag} Country: {country}\n\n🚀 Select an option below to get started:"
 
 @bot.message_handler(commands=['start'])
@@ -61,35 +48,45 @@ def s(m):
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb(c):
-    uid=c.from_user.id; d=c.data
-    if d.startswith("country_"):
-        user_country[uid]=d.split("_")[1]
+    uid=c.from_user.id
+    if c.data.startswith("country_"):
+        user_country[uid]=c.data.split("_")[1]
         bot.edit_message_text(f"✅ Country set to {user_country[uid]}!", c.message.chat.id, c.message.message_id)
         bot.send_message(c.message.chat.id, welcome(c.from_user), reply_markup=main_kb())
         bot.answer_callback_query(c.id)
         return
-    if d.startswith("buy_"):
-        p=d.split("_")[1]; price=PRICE[p]; bal=user_balance.get(uid,0)
-        if bal<price:
-            bot.answer_callback_query(c.id, f"Low Balance Need ₹{price}", show_alert=True)
-            return
-        if not stock[p]:
-            bot.answer_callback_query(c.id, "Stock Empty", show_alert=True)
-            return
-        user_balance[uid]=bal-price
-        f=stock[p].pop(0)
-        bot.send_message(c.message.chat.id, f"✅ Bought {p}!\nFile: {f}")
-    elif d=="stock":
-        t="📦 STOCK:\n"
-        for k,v in stock.items(): t+=f"{k}: {len(v)}\n"
-        bot.send_message(c.message.chat.id, t)
-    elif d=="bal":
-        bot.send_message(c.message.chat.id, f"💰 Balance: ₹{user_balance.get(uid,0):.2f}")
-    elif d=="addfunds":
-        bot.send_message(c.message.chat.id, f"💳 Add Funds ID: {uid}")
-    elif d=="getfiles":
-        bot.send_message(c.message.chat.id, "📁 No files yet")
     bot.answer_callback_query(c.id)
+
+# Reply keyboard er jonno
+@bot.message_handler(func=lambda m: m.text and "Buy" in m.text)
+def buy(m):
+    uid=m.from_user.id
+    p="1D" if "1 Days" in m.text else "3D" if "3 Days" in m.text else "7D" if "7 Days" in m.text else "15D" if "15 Days" in m.text else "30D"
+    price=PRICE[p]; bal=user_balance.get(uid,0)
+    if bal<price:
+        bot.reply_to(m, f"❌ Low Balance Need ₹{price}")
+        return
+    if not stock[p]:
+        bot.reply_to(m, "⚠️ Stock Empty")
+        return
+    user_balance[uid]=bal-price
+    f=stock[p].pop(0)
+    bot.reply_to(m, f"✅ Bought {p}!\nFile: {f}\nBal: ₹{user_balance[uid]:.2f}")
+
+@bot.message_handler(func=lambda m: m.text=="📦 Stock")
+def st(m):
+    t="📦 STOCK:\n"
+    for k,v in stock.items(): t+=f"{k}: {len(v)}\n"
+    bot.send_message(m.chat.id, t)
+
+@bot.message_handler(func=lambda m: m.text=="💰 Balance")
+def bl(m): bot.send_message(m.chat.id, f"💰 Balance: ₹{user_balance.get(m.from_user.id,0):.2f}")
+
+@bot.message_handler(func=lambda m: m.text=="➕ Add Funds")
+def af(m): bot.send_message(m.chat.id, f"💳 Add Funds ID: {m.from_user.id}")
+
+@bot.message_handler(func=lambda m: m.text=="📁 Get Files")
+def gf(m): bot.send_message(m.chat.id, "📁 No files yet")
 
 @bot.message_handler(commands=['addstock'])
 def ast(m):
