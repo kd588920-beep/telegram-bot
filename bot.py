@@ -39,24 +39,16 @@ def get_price(uid, day):
     return price.get(day), "Normal pricing"
 
 def get_stock_text():
-    txt="📦 Live Stock Status\n"
-    txt+="━━━━━━━━━━━━\n\n"
-    txt+="🎯 CARROM\n"
+    txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
         c=len(stock_carrom.get(d,[]))
         day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
-        if c>0:
-            txt+=f"✅ {day_name}: {c} keys\n"
-        else:
-            txt+=f"❌ {day_name}: {c} keys\n"
+        txt+=f"{'✅' if c>0 else '❌'} {day_name}: {c} keys\n"
     txt+="\n🎱 8 BALL POOL\n"
     for d in ["1D","3D","7D","15D","30D"]:
         c=len(stock_8ball.get(d,[]))
         day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
-        if c>0:
-            txt+=f"✅ {day_name}: {c} keys\n"
-        else:
-            txt+=f"❌ {day_name}: {c} keys\n"
+        txt+=f"{'✅' if c>0 else '❌'} {day_name}: {c} keys\n"
     return txt
 
 def country_kb():
@@ -105,7 +97,7 @@ def confirm_kb():
 def welcome_text(uid):
     uid=str(uid); bal=user_balance.get(uid,0); country=user_country.get(uid,"India")
     plan_text="👑 BOSS" if str(uid)==str(ADMIN_ID) else ("👑 VIP" if user_plan.get(uid)=="VIP" else "💎 RESELLER" if user_plan.get(uid)=="RESELLER" else "👤 FREE")
-    return f"👑 Welcome to Koushik Gaming!\n\n👤 Plan: {plan_text}\n💰 Balance: ₹{bal}\n🇮🇳 Country: {country}\n\n🚀 Select an option below:"
+    return f"👑 Welcome to Koushik Gaming!\n\n👤 Plan: {plan_text}\n💰 Balance: ₹{bal}\n🇮🇳 Country: {country}\n\n📢 Channel: @gamingkoushikyt\n\n🚀 Select an option below:"
 
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
@@ -142,7 +134,7 @@ def cb_handler(c):
             bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock!")
             bot.answer_callback_query(c.id); return
         pending_buy[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"🛒 Confirm Purchase\n\n🎯 Game: {game}\n⏰ Duration: {day.replace('D',' Days')}\n💰 Price: ₹{p}.00 ({ptype})\n📦 Stock: {len(stock_list)} keys available\n\n👉 Tap ✅ Confirm to proceed or ❌ Cancel to abort.",reply_markup=confirm_kb())
+        bot.send_message(c.message.chat.id,f"🛒 Confirm Purchase\n\n🎯 Game: {game}\n⏰ Duration: {day.replace('D',' Days')}\n💰 Price: ₹{p:.2f} ({ptype})\n📦 Stock: {len(stock_list)} keys available\n\n👉 Tap ✅ Confirm to proceed or ❌ Cancel to abort.",reply_markup=confirm_kb())
         bot.answer_callback_query(c.id); return
     if data=="confirm_yes":
         if uid not in pending_buy: bot.answer_callback_query(c.id, "No pending purchase"); return
@@ -154,7 +146,7 @@ def cb_handler(c):
             bot.send_message(c.message.chat.id,"❌ Out of Stock now!")
             del pending_buy[uid]; bot.answer_callback_query(c.id); return
         if bal < p:
-            bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\nRequired: ₹{p}.00\nYour Balance: ₹{bal}.00\n\n• Top up via ➕ Add Funds.")
+            bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\nRequired: ₹{p:.2f}\nYour Balance: ₹{bal:.2f}\n\n• Top up via ➕ Add Funds.")
             del pending_buy[uid]
             bot.answer_callback_query(c.id)
             return
@@ -163,8 +155,8 @@ def cb_handler(c):
         if "CARROM" in game: stock_carrom[day]=stock_list
         else: stock_8ball[day]=stock_list
         save_data(); del pending_buy[uid]
-        bot.send_message(c.message.chat.id,f"✅ **Purchase Success!**\n\n🎮 Game: {game}\n📅 Duration: {day}\n🔑 Key: `{key}`\n💰 Deducted: ₹{p}\n💳 Remaining: ₹{user_balance[uid]}",parse_mode="Markdown")
-        try: bot.send_message(ADMIN_ID,f"💸 SELL: User {uid} bought {game} {day} - ₹{p}\nKey: {key}")
+        bot.send_message(c.message.chat.id,f"✅ **Purchase Success!**\n\n🎮 Game: {game}\n📅 Duration: {day}\n🔑 Key: `{key}`\n💰 Deducted: ₹{p:.2f}\n💳 Remaining: ₹{user_balance[uid]:.2f}",parse_mode="Markdown")
+        try: bot.send_message(ADMIN_ID,f"💸 SELL: User {uid} bought {game} {day} - ₹{p:.2f}\nKey: {key}")
         except: pass
         bot.answer_callback_query(c.id); return
     if data=="confirm_no":
@@ -228,6 +220,7 @@ def admin_cmd(m):
     if m.from_user.id==ADMIN_ID:
         user_plan[str(m.from_user.id)]="BOSS"; save_data()
         bot.send_message(m.chat.id,"👑 BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
+
 @bot.message_handler(func=lambda m: m.text and "Buy 1 Days" in m.text)
 def buy1(m): bot.send_message(m.chat.id,f"🎁 1 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("1D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 3 Days" in m.text)
@@ -238,7 +231,32 @@ def buy7(m): bot.send_message(m.chat.id,f"🎁 7 Days Plan Selected\n\n🎮 Sele
 def buy15(m): bot.send_message(m.chat.id,f"🎁 15 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("15D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
 def buy30(m): bot.send_message(m.chat.id,f"🎁 30 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("30D"))
-@bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
+
+@bot.message_handler(func=lambda m: m.text and "Add Funds" in m.text)
+def add_funds_cmd(m):
+    uid=str(m.from_user.id)
+    bal=user_balance.get(uid,0)
+    kb=types.InlineKeyboardMarkup(row_width=1)
+    kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://wa.me/916296272384"))
+    kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
+    caption=f"""💳 **Add Funds**
+
+👤 ID: `{uid}`
+💰 Balance: ₹{bal:.2f}
+
+💵 **Scan QR & Pay**
+📱 Jio Payment - Auto UPI
+
+⚠️ **Pay kore screenshot + ID pathao Admin ke!**
+✅ **2-5 min e balance add hobe!**"""
+    try:
+        with open("qr.jpg","rb") as photo:
+            bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="Markdown", reply_markup=kb)
+    except Exception as e:
+        print(f"QR Error: {e}")
+        bot.send_message(m.chat.id, caption+"\n\n❌ QR missing - Admin ke bolo!", parse_mode="Markdown", reply_markup=kb)
+
+@bot.message_handler(func=lambda m: m.text and str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
     uid=str(m.from_user.id); task=pending_admin.get(uid); txt=m.text or ""
     if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
@@ -246,7 +264,7 @@ def pending_admin_handler(m):
         if task=="add_bal":
             parts=txt.split(); target=parts[0]; amt=float(parts[1])
             user_balance[target]=user_balance.get(target,0)+amt; save_data()
-            bot.send_message(m.chat.id,f"✅ Added ₹{amt} to {target}")
+            bot.send_message(m.chat.id,f"✅ Added ₹{amt:.2f} to {target}")
         elif task=="set_price":
             parts=txt.split(); day=parts[0].upper(); p=int(parts[1]); price[day]=p; save_data()
             bot.send_message(m.chat.id,f"✅ Price {day} = ₹{p}")
@@ -269,6 +287,7 @@ def pending_admin_handler(m):
                     if d in t: stock_8ball[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ 8BALL {d} Cleared")
         del pending_admin[uid]
     except Exception as e: bot.send_message(m.chat.id,f"❌ Error: {e}")
+
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_add)
 def pending_handler(m):
     if m.from_user.id!=ADMIN_ID: return
@@ -287,8 +306,9 @@ def pending_handler(m):
     total=len(stock_carrom[day]) if "CARROM" in game else len(stock_8ball[day])
     bot.send_message(m.chat.id,f"✅ {game} {day} Added: {added}, Total: {total}")
     bot.send_message(m.chat.id,"👇 Next?",reply_markup=add_stock_inline_kb())
+
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
-def bal_cmd(m): bot.send_message(m.chat.id,f"💰 Balance: ₹{user_balance.get(str(m.from_user.id),0)}")
+def bal_cmd(m): bot.send_message(m.chat.id,f"💰 Balance: ₹{user_balance.get(str(m.from_user.id),0):.2f}")
 @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
 def back_main(m):
     uid=str(m.from_user.id)
