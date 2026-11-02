@@ -4,7 +4,7 @@ import telebot
 from telebot import types
 
 BOT_TOKEN=os.environ.get("BOT_TOKEN")
-ADMIN_ID=7260634404
+ADMIN_ID=7189081595
 PRICE={"1D":70,"3D":150,"7D":300,"15D":550,"30D":1000}
 stock={"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance={}
@@ -41,7 +41,7 @@ def welcome(m):
     country=user_country.get(m.from_user.id,"India")
     flag="🇮🇳" if country=="India" else "🇧🇩"
     plan="Vip 👑 VIP/Reseller" if m.from_user.id==ADMIN_ID else "Bronze"
-    return f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {m.from_user.first_name}\n👑 Plan: {plan}\n💰 Balance: ₹{bal:.2f}\n{flag} Country: {country}\n\n🚀 Select an option below to get started:"
+    return f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {m.from_user.first_name}\n🆔 ID: {m.from_user.id}\n👑 Plan: {plan}\n💰 Balance: ₹{bal:.2f}\n{flag} Country: {country}\n\n🚀 Select an option below to get started:"
 
 @bot.message_handler(commands=['start'])
 def s(m):
@@ -63,14 +63,13 @@ def cb(c):
         return
     bot.answer_callback_query(c.id)
 
-# === ADMIN COMMAND ===
 @bot.message_handler(commands=['admin'])
 def admin_cmd(m):
     if m.from_user.id!=ADMIN_ID:
-        bot.reply_to(m, "❌ You are not admin!")
+        bot.reply_to(m, f"❌ You are not admin!\nYour ID: {m.from_user.id}")
         return
     total_keys=sum(len(v) for v in stock.values())
-    txt=f"👑 ADMIN PANEL\n━━━━━━━━━━━━\n💰 Total Balance Users: {len(user_balance)}\n📦 Total Keys: {total_keys}\n🌍 Users Country Set: {len(user_country)}\n\nUse buttons below:"
+    txt=f"👑 ADMIN PANEL\n━━━━━━━━━━━━\n💰 Total Users: {len(user_balance)}\n📦 Total Keys: {total_keys}\n🆔 Your ID: {m.from_user.id} (VIP)\n\nUse buttons below:"
     bot.send_message(m.chat.id, txt, reply_markup=admin_kb())
 
 @bot.message_handler(func=lambda m: m.text=="👑 Admin Panel")
@@ -81,7 +80,7 @@ def admin_panel(m):
 @bot.message_handler(func=lambda m: m.text=="📊 Total Users")
 def total_users(m):
     if m.from_user.id!=ADMIN_ID: return
-    bot.send_message(m.chat.id, f"📊 Total Users: {len(user_balance)}\n💰 Users with balance: {len([k for k,v in user_balance.items() if v>0])}")
+    bot.send_message(m.chat.id, f"📊 Total Users: {len(user_balance)}\n💰 With balance: {len([k for k,v in user_balance.items() if v>0])}")
 
 @bot.message_handler(func=lambda m: m.text=="📦 Check Stock")
 def check_stock_admin(m):
@@ -95,12 +94,12 @@ def check_stock_admin(m):
 @bot.message_handler(func=lambda m: m.text=="➕ Add Stock")
 def add_stock_help(m):
     if m.from_user.id!=ADMIN_ID: return
-    bot.send_message(m.chat.id, "➕ To add stock use:\n`/addstock 1D your_file_link_or_key`\n\nExample:\n`/addstock 1D CARROM-KEY-123`")
+    bot.send_message(m.chat.id, "➕ To add stock use:\n/addstock 1D your_key\n\nExample:\n/addstock 1D CARROM-KEY-123")
 
 @bot.message_handler(func=lambda m: m.text=="💸 Add Balance")
 def add_bal_help(m):
     if m.from_user.id!=ADMIN_ID: return
-    bot.send_message(m.chat.id, "💸 To add balance use:\n`/addbalance USER_ID AMOUNT`\n\nExample:\n`/addbalance 123456789 100`")
+    bot.send_message(m.chat.id, "💸 To add balance use:\n/addbalance USER_ID AMOUNT\n\nExample:\n/addbalance 123456789 100")
 
 @bot.message_handler(func=lambda m: m.text=="🔙 Back to Shop")
 def back_shop(m):
@@ -132,7 +131,7 @@ def st(m):
 def bl(m): bot.send_message(m.chat.id, f"💰 Balance: ₹{user_balance.get(m.from_user.id,0):.2f}")
 
 @bot.message_handler(func=lambda m: m.text=="➕ Add Funds")
-def af(m): bot.send_message(m.chat.id, f"💳 Add Funds ID: {m.from_user.id}\nContact Admin @Koushik")
+def af(m): bot.send_message(m.chat.id, f"💳 Add Funds ID: {m.from_user.id}\nContact Admin")
 
 @bot.message_handler(func=lambda m: m.text=="📁 Get Files")
 def gf(m): bot.send_message(m.chat.id, "📁 No files yet")
@@ -149,12 +148,4 @@ def ast(m):
 def ab(m):
     if m.from_user.id!=ADMIN_ID: return
     try:
-        a=m.text.split(); uid=int(a[1]); amt=float(a[2])
-        user_balance[uid]=user_balance.get(uid,0)+amt
-        bot.reply_to(m, f"Added ₹{amt} to {uid}")
-        bot.send_message(uid, f"💰 Added ₹{amt}! Bal ₹{user_balance[uid]:.2f}")
-    except: bot.reply_to(m, "Use /addbalance ID AMOUNT")
-
-def run(): app.run(host="0.0.0.0",port=10000)
-threading.Thread(target=run,daemon=True).start()
-bot.infinity_polling()
+        a=m.text.split(); uid=int(a[1]); amt=float(a
