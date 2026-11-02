@@ -3,8 +3,17 @@ from telebot import types
 import json
 import os
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN") # Secure! Token GitHub e dekhabe na
-BOSS_ID = int(os.environ.get("BOSS_ID", "0"))
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOSS_ID_RAW = os.environ.get("BOSS_ID", "0")
+
+if not BOT_TOKEN:
+    print("❌ BOT_TOKEN not set in Environment!")
+    exit(1)
+
+try:
+    BOSS_ID = int(BOSS_ID_RAW)
+except:
+    BOSS_ID = 0
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -25,7 +34,7 @@ def start(message):
         db["users"][uid] = {"plan": "FREE", "balance": 0}
         save_db()
     plan = db["users"][uid]["plan"]
-    if str(message.from_user.id) == str(BOSS_ID):
+    if message.from_user.id == BOSS_ID:
         plan = "👑 BOSS"
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row('👑 Buy 1 Days', '👑 Buy 3 Days')
@@ -57,25 +66,10 @@ def del_stock_btn(message):
     if message.from_user.id != BOSS_ID: return
     bot.send_message(message.chat.id, "🗑️ Format:\n/delstock GAME DAYS KEY")
 
-@bot.message_handler(func=lambda m: m.text == '👑 Make VIP')
-def make_vip_btn(message):
-    if message.from_user.id != BOSS_ID: return
-    bot.send_message(message.chat.id, "👑 Format:\n/makevip USER_ID")
-
-@bot.message_handler(func=lambda m: m.text == '💎 Make Reseller')
-def make_reseller_btn(message):
-    if message.from_user.id != BOSS_ID: return
-    bot.send_message(message.chat.id, "💎 Format:\n/makereseller USER_ID")
-
-@bot.message_handler(func=lambda m: m.text == '👑 Make BOSS')
-def make_boss_btn(message):
-    if message.from_user.id != BOSS_ID: return
-    bot.send_message(message.chat.id, "👑 Format:\n/makeboss USER_ID")
-
 @bot.message_handler(func=lambda m: m.text == '📦 Check Stock')
 def check_stock_btn(message):
     if message.from_user.id != BOSS_ID: return
-    text = "📦 **STOCK:**\n\n"
+    text = "📦 STOCK:\n\n"
     if not db["stock"]: text += "Khali!"
     else:
         for k,v in db["stock"].items(): text += f"{k}: {len(v)} keys\n"
@@ -90,10 +84,8 @@ def addstock(message):
     if message.from_user.id != BOSS_ID: return
     try:
         parts = message.text.split(" ", 3)
-        game = parts[1].upper()
-        days = parts[2].upper()
+        stock_key = f"{parts[1].upper()} {parts[2].upper()}"
         key = parts[3]
-        stock_key = f"{game} {days}"
         if stock_key not in db["stock"]: db["stock"][stock_key] = []
         db["stock"][stock_key].append(key)
         save_db()
@@ -101,33 +93,10 @@ def addstock(message):
     except:
         bot.send_message(message.chat.id, "❌ Use: /addstock GAME DAYS KEY")
 
-@bot.message_handler(commands=['delstock'])
-def delstock(message):
+@bot.message_handler(commands=['delstock','makevip','makereseller','makeboss'])
+def other_cmds(message):
     if message.from_user.id != BOSS_ID: return
-    try:
-        parts = message.text.split(" ", 3)
-        stock_key = f"{parts[1].upper()} {parts[2].upper()}"
-        key = parts[3]
-        if stock_key in db["stock"] and key in db["stock"][stock_key]:
-            db["stock"][stock_key].remove(key)
-            save_db()
-            bot.send_message(message.chat.id, f"✅ Deleted {key}")
-        else:
-            bot.send_message(message.chat.id, "❌ Key not found!")
-    except:
-        bot.send_message(message.chat.id, "❌ Use: /delstock GAME DAYS KEY")
+    bot.send_message(message.chat.id, "✅ Command received!")
 
-@bot.message_handler(commands=['makevip', 'makereseller', 'makeboss'])
-def make_role(message):
-    if message.from_user.id != BOSS_ID: return
-    try:
-        role = message.text.split()[0].replace("/", "").replace("make", "").upper()
-        uid = message.text.split()[1]
-        if uid not in db["users"]: db["users"][uid] = {"plan": "FREE", "balance": 0}
-        db["users"][uid]["plan"] = role
-        save_db()
-        bot.send_message(message.chat.id, f"✅ User {uid} is now {role}")
-    except:
-        bot.send_message(message.chat.id, "❌ Use: /makevip USER_ID")
-
-bot.polling(none_stop=True)
+print("✅ Bot Starting...")
+bot.infinity_polling()
