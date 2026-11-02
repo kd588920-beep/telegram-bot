@@ -31,22 +31,24 @@ bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
 @app.route('/')
-def home(): return "SHINIGAMI FINAL OK - BOSS"
+def home(): return "SHINIGAMI FINAL - COUNTRY FIX OK"
 
 def get_stock_text():
     txt="🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
         c=len(stock_carrom.get(d,[]))
-        txt+=f"{'✅' if c>0 else '❌'} {d} : {c} keys\n"
+        txt+=f"{'❌' if c==0 else '✅'} {d} : {c} keys\n"
     txt+="\n🎱 8 BALL\n"
     for d in ["1D","3D","7D","15D","30D"]:
         c=len(stock_8ball.get(d,[]))
-        txt+=f"{'✅' if c>0 else '❌'} {d} : {c} keys\n"
+        txt+=f"{'❌' if c==0 else '✅'} {d} : {c} keys\n"
     return txt
 
+# ✅ TOMAR CHAOA LOMBA INDIA / BANGLADESH BUTTON
 def country_kb():
     m=types.InlineKeyboardMarkup()
-    m.add(types.InlineKeyboardButton("🇮🇳 India",callback_data="country_India"),types.InlineKeyboardButton("🇧🇩 Bangladesh",callback_data="country_Bangladesh"))
+    m.add(types.InlineKeyboardButton("🇮🇳 India",callback_data="country_India"))
+    m.add(types.InlineKeyboardButton("🇧🇩 Bangladesh",callback_data="country_Bangladesh"))
     return m
 
 def main_kb():
@@ -74,36 +76,37 @@ def add_stock_inline_kb():
     m.add(types.InlineKeyboardButton("8BALL 15D",callback_data="addsel_8BALL_15D"),types.InlineKeyboardButton("8BALL 30D",callback_data="addsel_8BALL_30D"))
     return m
 
-# ✅ EITA TOMAR VALO LAGA WELCOME TEXT BOSS
 def welcome_text(uid):
     uid=str(uid)
     bal=user_balance.get(uid,0)
     country=user_country.get(uid,"India")
-    plan=user_plan.get(uid,"FREE")
-    if str(uid) == str(ADMIN_ID):
+    if str(uid)==str(ADMIN_ID):
         plan_text="👑 BOSS"
-    elif plan=="VIP":
-        plan_text="👑 VIP"
-    elif plan=="RESELLER":
-        plan_text="💎 RESELLER"
     else:
-        plan_text="👤 FREE"
-    return f"👑 Welcome to SHINIGAMI Bot!\n\nPlan: {plan_text}\nBalance: ₹{bal}\nCountry: {country}\n\n👇 Select an option"
+        plan=user_plan.get(uid,"FREE")
+        if plan=="VIP": plan_text="👑 VIP"
+        elif plan=="RESELLER": plan_text="💎 RESELLER"
+        else: plan_text="👤 FREE"
+    return f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Plan: {plan_text}\n💰 Balance: ₹{bal}\n🇮🇳 Country: {country}\n\n🚀 Select an option"
 
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
     uid=str(m.from_user.id)
-    if uid not in user_balance: user_balance[uid]=0.0; save_data()
+    if uid not in user_balance:
+        user_balance[uid]=0.0; save_data()
     if uid not in user_country:
         bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
     else:
+        if str(m.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"; save_data()
         bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
     uid=str(c.from_user.id); data=c.data
     if data.startswith("country_"):
-        user_country[uid]="India" if "India" in data else "Bangladesh"; save_data()
+        user_country[uid]="India" if "India" in data else "Bangladesh"
+        if str(c.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"
+        save_data()
         bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
         bot.answer_callback_query(c.id); return
     if data.startswith("addsel_"):
@@ -132,7 +135,7 @@ def pending_handler(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id)
     if uid not in pending_add: return
-    if "Add Stock" in m.text or "Check Stock" in m.text or "Delete Stock" in m.text or "Make VIP" in m.text or "Back to Main" in m.text: return
+    if "Add Stock" in m.text or "Check Stock" in m.text or "Delete Stock" in m.text or "Make VIP" in m.text or "Back to Main" in m.text or "Users List" in m.text: return
     game,day=pending_add[uid]; keys=m.text.strip().split("\n"); added=0
     for k in keys:
         k=k.strip()
@@ -145,15 +148,14 @@ def pending_handler(m):
     bot.send_message(m.chat.id,f"✅ **SUCCESS BOSS! {game} {day} Added**\n🔑 Added: {added} keys\n📊 Total {day}: {total} keys",parse_mode="Markdown")
     bot.send_message(m.chat.id,"👇 **Aab Kaunsa Add Karoge BOSS?**",reply_markup=add_stock_inline_kb(),parse_mode="Markdown")
 
-@bot.message_handler(func=lambda m: m.text=="💰 Balance" or "Balance" in m.text)
+@bot.message_handler(func=lambda m: m.text=="💰 Balance" or m.text=="💰 Balance" in m.text or "Balance" in m.text)
 def bal_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     bot.send_message(m.chat.id,f"💰 Balance: ₹{bal}")
 
-@bot.message_handler(func=lambda m: True)
-def all_msg(m):
-    if m.text=="🔙 Back to Main":
-        bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+@bot.message_handler(func=lambda m: m.text=="🔙 Back to Main" or "Back to Main" in m.text)
+def back_main(m):
+    bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
 def run_flask(): app.run(host="0.0.0.0",port=10000)
 threading.Thread(target=run_flask,daemon=True).start()
