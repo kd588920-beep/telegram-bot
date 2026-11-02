@@ -38,6 +38,7 @@ stock_8ball={"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance={}
 user_country={}
 user_plan={}
+pending_add={} # NEW: key add korar jonno
 
 load_data()
 bot=telebot.TeleBot(BOT_TOKEN)
@@ -71,6 +72,14 @@ def admin_kb():
     m.add(types.KeyboardButton("🔙 Back to Main"))
     return m
 
+def add_stock_inline_kb():
+    m=types.InlineKeyboardMarkup(row_width=3)
+    m.add(types.InlineKeyboardButton("CARROM 1D", callback_data="addsel_CARROM_1D"), types.InlineKeyboardButton("CARROM 3D", callback_data="addsel_CARROM_3D"), types.InlineKeyboardButton("CARROM 7D", callback_data="addsel_CARROM_7D"))
+    m.add(types.InlineKeyboardButton("CARROM 15D", callback_data="addsel_CARROM_15D"), types.InlineKeyboardButton("CARROM 30D", callback_data="addsel_CARROM_30D"))
+    m.add(types.InlineKeyboardButton("8BALL 1D", callback_data="addsel_8BALL_1D"), types.InlineKeyboardButton("8BALL 3D", callback_data="addsel_8BALL_3D"), types.InlineKeyboardButton("8BALL 7D", callback_data="addsel_8BALL_7D"))
+    m.add(types.InlineKeyboardButton("8BALL 15D", callback_data="addsel_8BALL_15D"), types.InlineKeyboardButton("8BALL 30D", callback_data="addsel_8BALL_30D"))
+    return m
+
 def welcome_text(uid):
     uid_str=str(uid)
     bal=user_balance.get(uid_str,0)
@@ -93,11 +102,25 @@ def start_cmd(m):
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
     uid=str(c.from_user.id)
-    if "India" in c.data: user_country[uid]="India"
-    elif "Bangladesh" in c.data: user_country[uid]="Bangladesh"
-    save_data()
-    bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
-    bot.answer_callback_query(c.id)
+    data=c.data
+
+    # Country Select
+    if data.startswith("country_"):
+        if "India" in data: user_country[uid]="India"
+        elif "Bangladesh" in data: user_country[uid]="Bangladesh"
+        save_data()
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
+        bot.answer_callback_query(c.id)
+        return
+
+    # NEW: Add Stock Selection
+    if data.startswith("addsel_"):
+        if c.from_user.id!=ADMIN_ID: return
+        _, game, day = data.split("_")
+        pending_add[str(c.from_user.id)] = (game, day)
+        bot.send_message(c.message.chat.id, f"✅ **{game} {day} Select Korecho BOSS!**\n\nEbar key ta pathao:\n`SHINIGAMI-{day}-XXXX`\n\nSudhu key ta likhe pathao, ami auto add kore debo!", parse_mode="Markdown")
+        bot.answer_callback_query(c.id)
+        return
 
 # --- USER BUTTONS ---
 @bot.message_handler(func=lambda m: m.text=="📦 Stock")
@@ -125,7 +148,7 @@ def admin_cmd(m):
 @bot.message_handler(func=lambda m: m.text=="➕ Add Stock")
 def add_stock_btn(m):
     if m.from_user.id!=ADMIN_ID: return
-    bot.send_message(m.chat.id, "📝 **Add Stock Format:**\n\n`/addstock CARROM 1D KEY-123`\n`/addstock 8BALL 7D 8BALL-KEY`", parse_mode="Markdown")
+    bot.send_message(m.chat.id, "👇 **Konta Add Korbe BOSS?**\nNiche theke select koro:", reply_markup=add_stock_inline_kb(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text=="➖ Delete Stock")
 def del_stock_btn(m):
@@ -168,6 +191,22 @@ def users_list(m):
 @bot.message_handler(func=lambda m: m.text=="🔙 Back to Main")
 def back_main(m):
     bot.send_message(m.chat.id, welcome_text(m.from_user.id), reply_markup=main_kb())
+
+# --- PENDING ADD HANDLER (NEW) ---
+@bot.message_handler(func=lambda m: str(m.from_user.id) in pending_add and m.text and not m.text.startswith("/"))
+def pending_add_handler(m):
+    if m.from_user.id!=ADMIN_ID: return
+    uid_str=str(m.from_user.id)
+    if uid_str not in pending_add: return
+    game, day = pending_add[uid_str]
+    key = m.text.strip()
+    if "CARROM" in game:
+        stock_carrom[day].append(key)
+    else:
+        stock_8ball[day].append(key)
+    save_data()
+    del pending_add[uid_str]
+    bot.send_message(m.chat.id, f"✅ **SUCCESS BOSS!**\n\n📦 {game} {day} Added\n🔑 `{key}`\n📊 Total: {len(stock_carrom[day]) if 'CARROM' in game else len(stock_8ball[day])}", parse_mode="Markdown")
 
 # --- ADMIN COMMANDS ---
 @bot.message_handler(commands=['addstock'])
