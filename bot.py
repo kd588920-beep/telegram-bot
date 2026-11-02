@@ -9,7 +9,7 @@ ADMIN_ID = 7189081595
 stock_carrom = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 stock_8ball = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance = {}; user_country = {}; user_plan = {}; pending_add = {}
-price = {"1D":100,"3D":250,"7D":400,"15D":700,"30D":1200}
+price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
 pending_admin = {} # For Balance/Broadcast/Price/VIP
 
 def save_data():
