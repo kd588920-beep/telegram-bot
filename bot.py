@@ -21,7 +21,6 @@ def country_kb():
     return m
 
 def main_kb():
-    # Ebar sudhu niche 1 ta set thakbe - uporer ta delete
     m=types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     m.add(types.KeyboardButton("🩸 Buy 1 Days"), types.KeyboardButton("🩸 Buy 3 Days"))
     m.add(types.KeyboardButton("🩸 Buy 7 Days"), types.KeyboardButton("🩸 Buy 15 Days"))
@@ -57,7 +56,6 @@ def cb(c):
         return
     bot.answer_callback_query(c.id)
 
-# Reply keyboard er jonno
 @bot.message_handler(func=lambda m: m.text and "Buy" in m.text)
 def buy(m):
     uid=m.from_user.id
@@ -73,11 +71,33 @@ def buy(m):
     f=stock[p].pop(0)
     bot.reply_to(m, f"✅ Bought {p}!\nFile: {f}\nBal: ₹{user_balance[uid]:.2f}")
 
+# ***** EITA HOLO TOMAR CHAOA STOCK DESIGN *****
 @bot.message_handler(func=lambda m: m.text=="📦 Stock")
 def st(m):
-    t="📦 STOCK:\n"
-    for k,v in stock.items(): t+=f"{k}: {len(v)}\n"
-    bot.send_message(m.chat.id, t)
+    c1=len(stock["1D"]); c3=len(stock["3D"]); c7=len(stock["7D"]); c15=len(stock["15D"]); c30=len(stock["30D"])
+    
+    def line(count):
+        if count>0:
+            return f"✅"
+        else:
+            return f"❌"
+    
+    text = f"📦 Live Stock Status\n"
+    text += f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    text += f"🎯 CARROM\n"
+    text += f"{line(c1)} 1 Days: {c1} keys\n"
+    text += f"{line(c3)} 3 Days: {c3} keys\n"
+    text += f"{line(c7)} 7 Days: {c7} keys\n"
+    text += f"{line(c15)} 15 Days: {c15} keys\n"
+    text += f"{line(c30)} 30 Days: {c30} keys\n\n"
+    text += f"🎱 8 BALL POOL\n"
+    text += f"❌ 1 Days: 0 keys\n"
+    text += f"❌ 3 Days: 0 keys\n"
+    text += f"❌ 7 Days: 0 keys\n"
+    text += f"❌ 15 Days: 0 keys\n"
+    text += f"❌ 30 Days: 0 keys\n"
+    
+    bot.send_message(m.chat.id, text)
 
 @bot.message_handler(func=lambda m: m.text=="💰 Balance")
 def bl(m): bot.send_message(m.chat.id, f"💰 Balance: ₹{user_balance.get(m.from_user.id,0):.2f}")
@@ -93,7 +113,7 @@ def ast(m):
     if m.from_user.id!=ADMIN_ID: return
     try:
         a=m.text.split(" ",2); stock[a[1].upper()].append(a[2])
-        bot.reply_to(m, f"Added Total {len(stock[a[1].upper()])}")
+        bot.reply_to(m, f"✅ Added. CARROM {a[1]} now {len(stock[a[1].upper()])} keys")
     except: bot.reply_to(m, "Use /addstock 1D link")
 
 @bot.message_handler(commands=['addbalance'])
