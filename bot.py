@@ -8,12 +8,12 @@ from telebot import types
 BOT_TOKEN=os.environ.get("BOT_TOKEN")
 ADMIN_ID=7189081595
 
-# SAVE LOAD
 def save_data():
     with open("data.json","w") as f:
         json.dump({
             "bal":user_balance,
             "country":user_country,
+            "plan":user_plan,
             "carrom":stock_carrom,
             "ball":stock_8ball
         }, f)
@@ -21,6 +21,7 @@ def save_data():
 def load_data():
     global user_balance
     global user_country
+    global user_plan
     global stock_carrom
     global stock_8ball
     try:
@@ -28,6 +29,7 @@ def load_data():
             d=json.load(f)
             user_balance=d.get("bal",{})
             user_country=d.get("country",{})
+            user_plan=d.get("plan",{})
             stock_carrom=d.get("carrom",stock_carrom)
             stock_8ball=d.get("ball",stock_8ball)
     except:
@@ -56,6 +58,7 @@ stock_8ball["30D"]=[]
 
 user_balance={}
 user_country={}
+user_plan={}
 
 load_data()
 
@@ -69,43 +72,20 @@ def home():
 def country_kb():
     m=types.InlineKeyboardMarkup(row_width=1)
     m.add(
-        types.InlineKeyboardButton(
-            "🇮🇳 India",
-            callback_data="country_India"
-        )
+        types.InlineKeyboardButton("🇮🇳 India", callback_data="country_India")
     )
     m.add(
-        types.InlineKeyboardButton(
-            "🇧🇩 Bangladesh",
-            callback_data="country_Bangladesh"
-        )
+        types.InlineKeyboardButton("🇧🇩 Bangladesh", callback_data="country_Bangladesh")
     )
     return m
 
 def main_kb():
-    m=types.ReplyKeyboardMarkup(
-        resize_keyboard=True,
-        row_width=2
-    )
-    m.add(
-        types.KeyboardButton("👑 Buy 1 Days"),
-        types.KeyboardButton("👑 Buy 3 Days")
-    )
-    m.add(
-        types.KeyboardButton("👑 Buy 7 Days"),
-        types.KeyboardButton("👑 Buy 15 Days")
-    )
-    m.add(
-        types.KeyboardButton("👑 Buy 30 Days"),
-        types.KeyboardButton("📦 Stock")
-    )
-    m.add(
-        types.KeyboardButton("➕ Add Funds"),
-        types.KeyboardButton("💰 Balance")
-    )
-    m.add(
-        types.KeyboardButton("📁 Get Files")
-    )
+    m=types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
+    m.add(types.KeyboardButton("👑 Buy 1 Days"),types.KeyboardButton("👑 Buy 3 Days"))
+    m.add(types.KeyboardButton("👑 Buy 7 Days"),types.KeyboardButton("👑 Buy 15 Days"))
+    m.add(types.KeyboardButton("👑 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
+    m.add(types.KeyboardButton("➕ Add Funds"),types.KeyboardButton("💰 Balance"))
+    m.add(types.KeyboardButton("📁 Get Files"))
     return m
 
 def welcome_text(uid):
@@ -116,10 +96,14 @@ def welcome_text(uid):
         flag="🇮🇳"
     else:
         flag="🇧🇩"
+    if str(uid)==str(ADMIN_ID):
+        plan="👑 BOSS"
+    else:
+        plan=user_plan.get(uid_str,"Free User")
     return (
         f"👑 Welcome to SHINIGAMI Bot!\n\n"
         f"👤 Name: Koushik\n"
-        f"👑 Plan: Vip 👑 VIP/Reseller\n"
+        f"👑 Plan: {plan}\n"
         f"💰 Balance: ₹{bal}\n"
         f"{flag} Country: {country}\n\n"
         f"🚀 Select an option below to get started"
@@ -132,17 +116,9 @@ def start_cmd(m):
         user_balance[uid]=0.0
         save_data()
     if uid not in user_country:
-        bot.send_message(
-            m.chat.id,
-            "🌍 Select country",
-            reply_markup=country_kb()
-        )
+        bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
     else:
-        bot.send_message(
-            m.chat.id,
-            welcome_text(m.from_user.id),
-            reply_markup=main_kb()
-        )
+        bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
@@ -150,26 +126,16 @@ def cb_handler(c):
     if "India" in c.data:
         user_country[uid]="India"
         save_data()
-        bot.send_message(
-            c.message.chat.id,
-            welcome_text(c.from_user.id),
-            reply_markup=main_kb()
-        )
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
     elif "Bangladesh" in c.data:
         user_country[uid]="Bangladesh"
         save_data()
-        bot.send_message(
-            c.message.chat.id,
-            welcome_text(c.from_user.id),
-            reply_markup=main_kb()
-        )
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
     bot.answer_callback_query(c.id)
 
 @bot.message_handler(func=lambda m: m.text=="📦 Stock")
 def stock_handler(m):
-    txt="📦 Live Stock Status\n"
-    txt+="━━━━━━━━━━━━\n\n"
-    txt+="🎯 CARROM\n"
+    txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
         n=len(stock_carrom.get(d,[]))
         if n>0:
@@ -209,10 +175,34 @@ def addstock_cmd(m):
     except:
         bot.reply_to(m, "Use: /addstock CARROM 1D KEY")
 
+@bot.message_handler(commands=['makevip'])
+def makevip_cmd(m):
+    if m.from_user.id!=ADMIN_ID:
+        return
+    try:
+        uid=m.text.split(" ")[1]
+        user_plan[str(uid)]="Vip 👑 VIP/Reseller"
+        save_data()
+        bot.reply_to(m, f"✅ {uid} ke VIP banano holo!")
+    except:
+        bot.reply_to(m, "Use: /makevip USER_ID")
+
+@bot.message_handler(commands=['makereseller'])
+def makereseller_cmd(m):
+    if m.from_user.id!=ADMIN_ID:
+        return
+    try:
+        uid=m.text.split(" ")[1]
+        user_plan[str(uid)]="Reseller"
+        save_data()
+        bot.reply_to(m, f"✅ {uid} ke Reseller banano holo!")
+    except:
+        bot.reply_to(m, "Use: /makereseller USER_ID")
+
 @bot.message_handler(commands=['admin'])
 def admin_cmd(m):
     if m.from_user.id==ADMIN_ID:
-        bot.send_message(m.chat.id, "Admin OK")
+        bot.send_message(m.chat.id, "Admin OK BOSS")
 
 def run_flask():
     app.run(host="0.0.0.0",port=10000)
