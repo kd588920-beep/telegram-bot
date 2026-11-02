@@ -1,211 +1,152 @@
-import os
-import json
-import threading
-from flask import Flask
 import telebot
 from telebot import types
+import json
+import os
 
-BOT_TOKEN=os.environ.get("BOT_TOKEN")
-ADMIN_ID=7189081595
+BOT_TOKEN = "TOMAR_BOT_TOKEN_EKHANE_DAO"
+BOSS_ID = 123456789 # Ekhane tomar Telegram ID dao
 
-def save_data():
-    with open("data.json","w") as f:
-        json.dump({
-            "bal":user_balance,
-            "country":user_country,
-            "plan":user_plan,
-            "carrom":stock_carrom,
-            "ball":stock_8ball
-        }, f)
+bot = telebot.TeleBot(BOT_TOKEN)
 
-def load_data():
-    global user_balance
-    global user_country
-    global user_plan
-    global stock_carrom
-    global stock_8ball
-    try:
-        with open("data.json","r") as f:
-            d=json.load(f)
-            user_balance=d.get("bal",{})
-            user_country=d.get("country",{})
-            user_plan=d.get("plan",{})
-            stock_carrom=d.get("carrom",stock_carrom)
-            stock_8ball=d.get("ball",stock_8ball)
-    except:
-        pass
+# Database
+if os.path.exists("db.json"):
+    with open("db.json", "r") as f:
+        db = json.load(f)
+else:
+    db = {"stock": {}, "users": {}}
 
-PRICE={}
-PRICE["1D"]=70
-PRICE["3D"]=150
-PRICE["7D"]=300
-PRICE["15D"]=550
-PRICE["30D"]=1000
+def save_db():
+    with open("db.json", "w") as f:
+        json.dump(db, f)
 
-stock_carrom={}
-stock_carrom["1D"]=[]
-stock_carrom["3D"]=[]
-stock_carrom["7D"]=[]
-stock_carrom["15D"]=[]
-stock_carrom["30D"]=[]
-
-stock_8ball={}
-stock_8ball["1D"]=[]
-stock_8ball["3D"]=[]
-stock_8ball["7D"]=[]
-stock_8ball["15D"]=[]
-stock_8ball["30D"]=[]
-
-user_balance={}
-user_country={}
-user_plan={}
-
-load_data()
-
-bot=telebot.TeleBot(BOT_TOKEN)
-app=Flask(__name__)
-
-@app.route('/')
-def home():
-    return "SHINIGAMI OK"
-
-def country_kb():
-    m=types.InlineKeyboardMarkup(row_width=1)
-    m.add(
-        types.InlineKeyboardButton("🇮🇳 India", callback_data="country_India")
-    )
-    m.add(
-        types.InlineKeyboardButton("🇧🇩 Bangladesh", callback_data="country_Bangladesh")
-    )
-    return m
-
-def main_kb():
-    m=types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
-    m.add(types.KeyboardButton("👑 Buy 1 Days"),types.KeyboardButton("👑 Buy 3 Days"))
-    m.add(types.KeyboardButton("👑 Buy 7 Days"),types.KeyboardButton("👑 Buy 15 Days"))
-    m.add(types.KeyboardButton("👑 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
-    m.add(types.KeyboardButton("➕ Add Funds"),types.KeyboardButton("💰 Balance"))
-    m.add(types.KeyboardButton("📁 Get Files"))
-    return m
-
-def welcome_text(uid):
-    uid_str=str(uid)
-    bal=user_balance.get(uid_str,0)
-    country=user_country.get(uid_str,"India")
-    if country=="India":
-        flag="🇮🇳"
-    else:
-        flag="🇧🇩"
-    if str(uid)==str(ADMIN_ID):
-        plan="👑 BOSS"
-    else:
-        plan=user_plan.get(uid_str,"Free User")
-    return (
-        f"👑 Welcome to SHINIGAMI Bot!\n\n"
-        f"👤 Name: Koushik\n"
-        f"👑 Plan: {plan}\n"
-        f"💰 Balance: ₹{bal}\n"
-        f"{flag} Country: {country}\n\n"
-        f"🚀 Select an option below to get started"
-    )
-
+# /start
 @bot.message_handler(commands=['start'])
-def start_cmd(m):
-    uid=str(m.from_user.id)
-    if uid not in user_balance:
-        user_balance[uid]=0.0
-        save_data()
-    if uid not in user_country:
-        bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
-    else:
-        bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+def start(message):
+    uid = str(message.from_user.id)
+    if uid not in db["users"]:
+        db["users"][uid] = {"plan": "FREE", "balance": 0}
+        save_db()
+    
+    plan = db["users"][uid]["plan"]
+    if str(message.from_user.id) == str(BOSS_ID):
+        plan = "👑 BOSS"
 
-@bot.callback_query_handler(func=lambda c: True)
-def cb_handler(c):
-    uid=str(c.from_user.id)
-    if "India" in c.data:
-        user_country[uid]="India"
-        save_data()
-        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
-    elif "Bangladesh" in c.data:
-        user_country[uid]="Bangladesh"
-        save_data()
-        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
-    bot.answer_callback_query(c.id)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row('👑 Buy 1 Days', '👑 Buy 3 Days')
+    markup.row('👑 Buy 7 Days', '👑 Buy 15 Days')
+    markup.row('👑 Buy 30 Days', '📦 Stock')
+    markup.row('➕ Add Funds', '💰 Balance')
+    markup.row('📁 Get Files')
+    
+    bot.send_message(message.chat.id, f"👑 Welcome to SHINIGAMI Bot!\n\n👤 Name: {message.from_user.first_name}\n👑 Plan: {plan}\n💰 Balance: ₹{db['users'][uid]['balance']}\n🌍 Country: India\n\n🚀 Select an option below to get started", reply_markup=markup)
 
-@bot.message_handler(func=lambda m: m.text=="📦 Stock")
-def stock_handler(m):
-    txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
-    for d in ["1D","3D","7D","15D","30D"]:
-        n=len(stock_carrom.get(d,[]))
-        if n>0:
-            txt+=f"✅ {d} : {n} keys\n"
-        else:
-            txt+=f"❌ {d} : 0 keys\n"
-    txt+="\n🎱 8 BALL POOL\n"
-    for d in ["1D","3D","7D","15D","30D"]:
-        n=len(stock_8ball.get(d,[]))
-        if n>0:
-            txt+=f"✅ {d} : {n} keys\n"
-        else:
-            txt+=f"❌ {d} : 0 keys\n"
-    bot.send_message(m.chat.id, txt)
-
-@bot.message_handler(func=lambda m: m.text=="💰 Balance")
-def bal_handler(m):
-    uid=str(m.from_user.id)
-    b=user_balance.get(uid,0)
-    bot.send_message(m.chat.id, f"💰 Balance: ₹{b}")
-
-@bot.message_handler(commands=['addstock'])
-def addstock_cmd(m):
-    if m.from_user.id!=ADMIN_ID:
-        return
-    try:
-        parts=m.text.split(" ",3)
-        game=parts[1].upper()
-        day=parts[2].upper()
-        key=parts[3]
-        if "CARROM" in game:
-            stock_carrom[day].append(key)
-        else:
-            stock_8ball[day].append(key)
-        save_data()
-        bot.reply_to(m, f"Added {game} {day}")
-    except:
-        bot.reply_to(m, "Use: /addstock CARROM 1D KEY")
-
-@bot.message_handler(commands=['makevip'])
-def makevip_cmd(m):
-    if m.from_user.id!=ADMIN_ID:
-        return
-    try:
-        uid=m.text.split(" ")[1]
-        user_plan[str(uid)]="Vip 👑 VIP/Reseller"
-        save_data()
-        bot.reply_to(m, f"✅ {uid} ke VIP banano holo!")
-    except:
-        bot.reply_to(m, "Use: /makevip USER_ID")
-
-@bot.message_handler(commands=['makereseller'])
-def makereseller_cmd(m):
-    if m.from_user.id!=ADMIN_ID:
-        return
-    try:
-        uid=m.text.split(" ")[1]
-        user_plan[str(uid)]="Reseller"
-        save_data()
-        bot.reply_to(m, f"✅ {uid} ke Reseller banano holo!")
-    except:
-        bot.reply_to(m, "Use: /makereseller USER_ID")
-
+# /admin - FULL BOSS PANEL
 @bot.message_handler(commands=['admin'])
-def admin_cmd(m):
-    if m.from_user.id==ADMIN_ID:
-        bot.send_message(m.chat.id, "Admin OK BOSS")
+def admin_panel(message):
+    if message.from_user.id != BOSS_ID:
+        bot.send_message(message.chat.id, "❌ You are not BOSS!")
+        return
+    
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row('➕ Add Stock', '➖ Delete Stock')
+    markup.row('👑 Make VIP', '💎 Make Reseller')
+    markup.row('👑 Make BOSS', '📦 Check Stock')
+    markup.row('👥 Users List', '🔙 Back to Main')
+    
+    bot.send_message(message.chat.id, "👑 **BOSS ADMIN PANEL**\n\n✅ Admin OK BOSS\n\nKi korte chao? Niche theke select koro:", reply_markup=markup)
 
-def run_flask():
-    app.run(host="0.0.0.0",port=10000)
+# Admin Panel Buttons
+@bot.message_handler(func=lambda m: m.text == '➕ Add Stock')
+def add_stock_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    bot.send_message(message.chat.id, "📝 **Add Stock Format:**\n\n`/addstock GAME DAYS KEY`\n\n**Example:**\n`/addstock CARROM 1D KEY-ABC-123`\n`/addstock 8BP 7D 8BALL-XYZ-789`\n`/addstock LUDO 30D LUDO-TEST`", parse_mode="Markdown")
 
-threading.Thread(target=run_flask,daemon=True).start()
-bot.infinity_polling()
+@bot.message_handler(func=lambda m: m.text == '➖ Delete Stock')
+def del_stock_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    bot.send_message(message.chat.id, "🗑️ **Delete Stock Format:**\n\n`/delstock GAME DAYS KEY`\n\n**Example:**\n`/delstock CARROM 1D KEY-ABC-123`", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda m: m.text == '👑 Make VIP')
+def make_vip_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    bot.send_message(message.chat.id, "👑 **Make VIP Format:**\n\n`/makevip USER_ID`\n\nUser er Telegram ID dite hobe.")
+
+@bot.message_handler(func=lambda m: m.text == '💎 Make Reseller')
+def make_reseller_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    bot.send_message(message.chat.id, "💎 **Make Reseller Format:**\n\n`/makereseller USER_ID`")
+
+@bot.message_handler(func=lambda m: m.text == '👑 Make BOSS')
+def make_boss_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    bot.send_message(message.chat.id, "👑 **Make BOSS Format:**\n\n`/makeboss USER_ID`")
+
+@bot.message_handler(func=lambda m: m.text == '📦 Check Stock')
+def check_stock_btn(message):
+    if message.from_user.id != BOSS_ID: return
+    text = "📦 **CURRENT STOCK:**\n\n"
+    if not db["stock"]:
+        text += "Stock Khali!"
+    else:
+        for game, keys in db["stock"].items():
+            text += f"{game}: {len(keys)} keys\n"
+    bot.send_message(message.chat.id, text)
+
+@bot.message_handler(func=lambda m: m.text == '🔙 Back to Main')
+def back_main(message):
+    start(message)
+
+# /addstock Command
+@bot.message_handler(commands=['addstock'])
+def addstock(message):
+    if message.from_user.id != BOSS_ID: return
+    try:
+        # /addstock CARROM 1D KEY-123
+        parts = message.text.split(" ", 3)
+        game = parts[1].upper()
+        days = parts[2].upper()
+        key = parts[3]
+        stock_key = f"{game} {days}"
+        if stock_key not in db["stock"]:
+            db["stock"][stock_key] = []
+        db["stock"][stock_key].append(key)
+        save_db()
+        bot.send_message(message.chat.id, f"✅ Added {stock_key}\n🔑 Key: {key}\n📦 Total: {len(db['stock'][stock_key])}")
+    except:
+        bot.send_message(message.chat.id, "❌ Use: /addstock GAME DAYS KEY\nEx: /addstock CARROM 1D MYKEY-123")
+
+# /delstock
+@bot.message_handler(commands=['delstock'])
+def delstock(message):
+    if message.from_user.id != BOSS_ID: return
+    try:
+        parts = message.text.split(" ", 3)
+        game = parts[1].upper()
+        days = parts[2].upper()
+        key = parts[3]
+        stock_key = f"{game} {days}"
+        if stock_key in db["stock"] and key in db["stock"][stock_key]:
+            db["stock"][stock_key].remove(key)
+            save_db()
+            bot.send_message(message.chat.id, f"✅ Deleted {key} from {stock_key}")
+        else:
+            bot.send_message(message.chat.id, "❌ Key not found!")
+    except:
+        bot.send_message(message.chat.id, "❌ Use: /delstock GAME DAYS KEY")
+
+# /makevip /makereseller /makeboss
+@bot.message_handler(commands=['makevip', 'makereseller', 'makeboss'])
+def make_role(message):
+    if message.from_user.id != BOSS_ID: return
+    try:
+        role = message.text.split()[0].replace("/", "").replace("make", "").upper()
+        uid = message.text.split()[1]
+        if uid not in db["users"]:
+            db["users"][uid] = {"plan": "FREE", "balance": 0}
+        db["users"][uid]["plan"] = role
+        save_db()
+        bot.send_message(message.chat.id, f"✅ User {uid} is now {role}")
+    except:
+        bot.send_message(message.chat.id, "❌ Use: /makevip USER_ID")
+
+bot.polling(none_stop=True)
