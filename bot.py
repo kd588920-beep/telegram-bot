@@ -10,7 +10,7 @@ stock_carrom = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 stock_8ball = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance = {}; user_country = {}; user_plan = {}; pending_add = {}
 price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
-pending_admin = {} # For Balance/Broadcast/Price/VIP
+pending_admin = {}
 
 def save_data():
     with open("data.json","w") as f:
@@ -29,7 +29,7 @@ load_data()
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 @app.route('/')
-def home(): return "SHINIGAMI FULL ADMIN OK"
+def home(): return "SHINIGAMI BUY FIXED"
 
 def get_stock_text():
     txt="🎯 CARROM\n"
@@ -38,7 +38,7 @@ def get_stock_text():
     txt+="\n🎱 8 BALL\n"
     for d in ["1D","3D","7D","15D","30D"]:
         c=len(stock_8ball.get(d,[])); txt+=f"{'❌' if c==0 else '✅'} {d} : {c} keys\n"
-    txt+=f"\n💵 Price: {price}"
+    txt+=f"\n💵 Price:\n1D: ₹{price['1D']} | 3D: ₹{price['3D']} | 7D: ₹{price['7D']}\n15D: ₹{price['15D']} | 30D: ₹{price['30D']}"
     return txt
 
 def country_kb():
@@ -74,6 +74,11 @@ def add_stock_inline_kb():
     m.add(types.InlineKeyboardButton("8BALL 15D",callback_data="addsel_8BALL_15D"),types.InlineKeyboardButton("8BALL 30D",callback_data="addsel_8BALL_30D"))
     return m
 
+def buy_game_kb(day):
+    m=types.InlineKeyboardMarkup(row_width=2)
+    m.add(types.InlineKeyboardButton(f"🎯 CARROM {day}",callback_data=f"buy_CARROM_{day}"),types.InlineKeyboardButton(f"🎱 8 BALL {day}",callback_data=f"buy_8BALL_{day}"))
+    return m
+
 def welcome_text(uid):
     uid=str(uid); bal=user_balance.get(uid,0); country=user_country.get(uid,"India")
     plan_text="👑 BOSS" if str(uid)==str(ADMIN_ID) else ("👑 VIP" if user_plan.get(uid)=="VIP" else "💎 RESELLER" if user_plan.get(uid)=="RESELLER" else "👤 FREE")
@@ -104,8 +109,31 @@ def cb_handler(c):
         if c.from_user.id!=ADMIN_ID: return
         _,game,day=data.split("_"); pending_add[uid]=(game,day)
         bot.send_message(c.message.chat.id,f"✅ **{game} {day} Select Kiya BOSS!**\n\n🔑 **Abb key add kro! Ek line e ekta key**",parse_mode="Markdown")
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id); return
+    if data.startswith("buy_"):
+        # buy_CARROM_1D
+        _,game,day=data.split("_")
+        bal=user_balance.get(uid,0); need=price.get(day,0)
+        # check stock
+        stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
+        if len(stock_list)==0:
+            bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock!\nAdmin ke bolo stock add korte")
+            bot.answer_callback_query(c.id); return
+        if bal < need:
+            bot.send_message(c.message.chat.id,f"❌ Balance Kom! Need ₹{need}, You have ₹{bal}\n➕ Add Funds e click koro")
+            bot.answer_callback_query(c.id); return
+        # deliver
+        key=stock_list.pop(0)
+        user_balance[uid]=bal-need
+        if "CARROM" in game: stock_carrom[day]=stock_list
+        else: stock_8ball[day]=stock_list
+        save_data()
+        bot.send_message(c.message.chat.id,f"✅ **Purchase Success!**\n\n🎮 Game: {game}\n📅 Duration: {day}\n🔑 Key: `{key}`\n💰 Deducted: ₹{need}\n💳 Remaining: ₹{user_balance[uid]}",parse_mode="Markdown")
+        try: bot.send_message(ADMIN_ID,f"💸 SELL: User {uid} bought {game} {day} - ₹{need}\nKey: {key}")
+        except: pass
+        bot.answer_callback_query(c.id); return
 
+# ADMIN BUTTONS
 @bot.message_handler(func=lambda m: m.text and "Add Stock" in m.text)
 def add_stock_btn(m):
     if m.from_user.id!=ADMIN_ID: return
@@ -117,39 +145,38 @@ def add_stock_btn(m):
 @bot.message_handler(func=lambda m: m.text and "Delete Stock" in m.text)
 def del_stock_btn(m):
     if m.from_user.id!=ADMIN_ID: return
-    uid=str(m.from_user.id)
-    pending_admin[uid]="del_stock"
-    bot.send_message(m.chat.id,"🗑️ **Delete Format:**\n`CARROM 1D` likhle oi stock clear hobe\nExample: `CARROM 1D` ba `8BALL 7D`",parse_mode="Markdown")
+    uid=str(m.from_user.id); pending_admin[uid]="del_stock"
+    bot.send_message(m.chat.id,"🗑️ **Delete Format:**\n`CARROM 1D` likhle oi stock clear hobe",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Add Balance" in m.text)
 def add_bal_btn(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id); pending_admin[uid]="add_bal"
-    bot.send_message(m.chat.id,"💰 **Format:** `USERID AMOUNT`\nExample: `7189081595 500`\nUser ID pabe Users List e",parse_mode="Markdown")
+    bot.send_message(m.chat.id,"💰 **Format:** `USERID AMOUNT`\nExample: `7189081595 500`",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Set Price" in m.text)
 def set_price_btn(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id); pending_admin[uid]="set_price"
-    bot.send_message(m.chat.id,f"💵 **Current Price:** {price}\n\n**Format:** `DAYS PRICE`\nExample: `7D 450` ba `30D 1300`",parse_mode="Markdown")
+    bot.send_message(m.chat.id,f"💵 **Current Price:** {price}\n\n**Format:** `DAYS PRICE`\nExample: `7D 180`",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Broadcast" in m.text)
 def broadcast_btn(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id); pending_admin[uid]="broadcast"
-    bot.send_message(m.chat.id,"📢 **Broadcast Message Likho BOSS:**\nSob user ke jabe",parse_mode="Markdown")
+    bot.send_message(m.chat.id,"📢 **Broadcast Message Likho BOSS:**",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Make VIP" in m.text and "Cancel" not in m.text)
 def make_vip_btn(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id); pending_admin[uid]="make_vip"
-    bot.send_message(m.chat.id,"👑 **VIP Banate UserID dou:**\nExample: `123456789`",parse_mode="Markdown")
+    bot.send_message(m.chat.id,"👑 **VIP UserID dou:**",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Make Reseller" in m.text)
 def make_res_btn(m):
     if m.from_user.id!=ADMIN_ID: return
     uid=str(m.from_user.id); pending_admin[uid]="make_reseller"
-    bot.send_message(m.chat.id,"💎 **Reseller Banate UserID dou:**",parse_mode="Markdown")
+    bot.send_message(m.chat.id,"💎 **Reseller UserID dou:**",parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text and "Cancel VIP" in m.text)
 def cancel_vip_btn(m):
@@ -174,7 +201,7 @@ def stats_handler(m):
     if m.from_user.id!=ADMIN_ID: return
     total_users=len(user_balance); total_keys=sum([len(v) for v in stock_carrom.values()])+sum([len(v) for v in stock_8ball.values()])
     total_bal=sum(user_balance.values())
-    bot.send_message(m.chat.id,f"📊 **STATS**\n👥 Users: {total_users}\n🔑 Total Keys: {total_keys}\n💰 Total Balance in Bot: ₹{total_bal}\n💵 Price List: {price}")
+    bot.send_message(m.chat.id,f"📊 **STATS**\n👥 Users: {total_users}\n🔑 Keys: {total_keys}\n💰 Total Bal: ₹{total_bal}\nPrice: {price}")
 
 @bot.message_handler(func=lambda m: m.text and "Users List" in m.text)
 def users_handler(m):
@@ -190,32 +217,47 @@ def admin_cmd(m):
         user_plan[str(m.from_user.id)]="BOSS"; save_data()
         bot.send_message(m.chat.id,"👑 BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
 
-# PENDING HANDLERS
+# BUY BUTTONS - NEW FIX
+@bot.message_handler(func=lambda m: m.text and "Buy 1 Days" in m.text)
+def buy1(m): bot.send_message(m.chat.id,f"🎮 Select Game for 1D - Price ₹{price['1D']}",reply_markup=buy_game_kb("1D"))
+
+@bot.message_handler(func=lambda m: m.text and "Buy 3 Days" in m.text)
+def buy3(m): bot.send_message(m.chat.id,f"🎮 Select Game for 3D - Price ₹{price['3D']}",reply_markup=buy_game_kb("3D"))
+
+@bot.message_handler(func=lambda m: m.text and "Buy 7 Days" in m.text)
+def buy7(m): bot.send_message(m.chat.id,f"🎮 Select Game for 7D - Price ₹{price['7D']}",reply_markup=buy_game_kb("7D"))
+
+@bot.message_handler(func=lambda m: m.text and "Buy 15 Days" in m.text)
+def buy15(m): bot.send_message(m.chat.id,f"🎮 Select Game for 15D - Price ₹{price['15D']}",reply_markup=buy_game_kb("15D"))
+
+@bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
+def buy30(m): bot.send_message(m.chat.id,f"🎮 Select Game for 30D - Price ₹{price['30D']}",reply_markup=buy_game_kb("30D"))
+
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
     uid=str(m.from_user.id); task=pending_admin.get(uid); txt=m.text or ""
-    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","📦 Stock","Add Balance","Broadcast","Set Price","Stats"]):
+    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","Stock","Add Balance","Broadcast","Set Price","Stats"]):
         return
     try:
         if task=="add_bal":
             parts=txt.split(); target=parts[0]; amt=float(parts[1])
             user_balance[target]=user_balance.get(target,0)+amt; save_data()
-            bot.send_message(m.chat.id,f"✅ Added ₹{amt} to {target}\nNew Bal: ₹{user_balance[target]}")
+            bot.send_message(m.chat.id,f"✅ Added ₹{amt} to {target}\nNew: ₹{user_balance[target]}")
         elif task=="set_price":
             parts=txt.split(); day=parts[0].upper(); p=int(parts[1]); price[day]=p; save_data()
-            bot.send_message(m.chat.id,f"✅ Price Updated: {day} = ₹{p}")
+            bot.send_message(m.chat.id,f"✅ Price {day} = ₹{p}")
         elif task=="broadcast":
             count=0
             for u in user_balance.keys():
                 try: bot.send_message(int(u),f"📢 **BOSS MESSAGE:**\n\n{txt}",parse_mode="Markdown"); count+=1
                 except: pass
-            bot.send_message(m.chat.id,f"✅ Broadcast Done to {count} users")
+            bot.send_message(m.chat.id,f"✅ Broadcast to {count} users")
         elif task=="make_vip":
-            user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} is now VIP")
+            user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} VIP")
         elif task=="make_reseller":
-            user_plan[txt.strip()]="RESELLER"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} is now RESELLER")
+            user_plan[txt.strip()]="RESELLER"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} RESELLER")
         elif task=="cancel_vip" or task=="cancel_reseller":
-            user_plan[txt.strip()]="FREE"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} is now FREE")
+            user_plan[txt.strip()]="FREE"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} FREE")
         elif task=="del_stock":
             t=txt.upper()
             if "CARROM" in t:
@@ -226,7 +268,7 @@ def pending_admin_handler(m):
                     if d in t: stock_8ball[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ 8BALL {d} Cleared")
         del pending_admin[uid]
     except Exception as e:
-        bot.send_message(m.chat.id,f"❌ Error: {e}\nFormat thik dao BOSS")
+        bot.send_message(m.chat.id,f"❌ Error: {e}")
 
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_add)
 def pending_handler(m):
@@ -234,7 +276,7 @@ def pending_handler(m):
     uid=str(m.from_user.id)
     if uid not in pending_add: return
     txt=m.text or ""
-    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","📦 Stock","Add Balance","Broadcast","Set Price","Stats"]):
+    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","Stock","Add Balance","Broadcast","Set Price","Stats"]):
         return
     game,day=pending_add[uid]; keys=txt.strip().split("\n"); added=0
     for k in keys:
@@ -245,8 +287,8 @@ def pending_handler(m):
         added+=1
     save_data(); del pending_add[uid]
     total=len(stock_carrom[day]) if "CARROM" in game else len(stock_8ball[day])
-    bot.send_message(m.chat.id,f"✅ SUCCESS BOSS! {game} {day} Added\nAdded: {added} keys\nTotal {day}: {total} keys")
-    bot.send_message(m.chat.id,"👇 Aab Kaunsa Add Karoge BOSS?",reply_markup=add_stock_inline_kb())
+    bot.send_message(m.chat.id,f"✅ {game} {day} Added: {added} keys, Total: {total}")
+    bot.send_message(m.chat.id,"👇 Next?",reply_markup=add_stock_inline_kb())
 
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
 def bal_cmd(m):
