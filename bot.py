@@ -34,17 +34,29 @@ app = Flask(__name__)
 def home(): return "KOUSHIK NON STOP BOT LIVE"
 
 def get_price(uid, day):
-    # BOSS = NORMAL PRICE 60, VIP = DISCOUNT 40
     plan=user_plan.get(str(uid),"FREE")
     if plan=="VIP": return vip_price.get(day, price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
 def get_stock_text():
     txt="📦 Live Stock Status\n"
+    txt+="━━━━━━━━━━━━\n\n"
+    txt+="🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_carrom.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} CARROM {d}: {c}\n"
+        c=len(stock_carrom.get(d,[]))
+        day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
+        if c>0:
+            txt+=f"✅ {day_name}: {c} keys\n"
+        else:
+            txt+=f"❌ {day_name}: {c} keys\n"
+    txt+="\n🎱 8 BALL POOL\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_8ball.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} 8BALL {d}: {c}\n"
+        c=len(stock_8ball.get(d,[]))
+        day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
+        if c>0:
+            txt+=f"✅ {day_name}: {c} keys\n"
+        else:
+            txt+=f"❌ {day_name}: {c} keys\n"
     return txt
 
 def country_kb():
@@ -138,8 +150,14 @@ def cb_handler(c):
         p, _ = get_price(c.from_user.id, day)
         bal=user_balance.get(uid,0)
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        if len(stock_list)==0: bot.send_message(c.message.chat.id,"❌ Out of Stock now!"); del pending_buy[uid]; bot.answer_callback_query(c.id); return
-        if bal < p: bot.send_message(c.message.chat.id,f"❌ Balance Kom! Need ₹{p}, You have ₹{bal}"); del pending_buy[uid]; bot.answer_callback_query(c.id); return
+        if len(stock_list)==0:
+            bot.send_message(c.message.chat.id,"❌ Out of Stock now!")
+            del pending_buy[uid]; bot.answer_callback_query(c.id); return
+        if bal < p:
+            bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\nRequired: ₹{p}.00\nYour Balance: ₹{bal}.00\n\n• Top up via ➕ Add Funds.")
+            del pending_buy[uid]
+            bot.answer_callback_query(c.id)
+            return
         key=stock_list.pop(0)
         user_balance[uid]=bal-p
         if "CARROM" in game: stock_carrom[day]=stock_list
