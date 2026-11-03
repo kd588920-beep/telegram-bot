@@ -106,7 +106,7 @@ def confirm_kb():
     m.add(types.InlineKeyboardButton("✅ Confirm",callback_data="confirm_yes"),types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
-def welcome_text(uid, first_name="User"):
+def welcome_text(uid, first_name=None):
     s=str(uid)
     bal=user_balance.get(s,0)
     country=user_country.get(s,"India")
