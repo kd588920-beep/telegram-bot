@@ -34,55 +34,56 @@ load_data()
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 @app.route('/')
-def home(): return "KOUSHIK FINAL LIVE"
+def home(): return "KOUSHIK LOGO FINAL LIVE"
 
 def get_price(uid, day):
     s=str(uid)
     if s==str(ADMIN_ID):
-        if s in vip_mode_users:
-            return vip_price.get(day,price.get(day)), "Vip pricing"
-        else:
-            return price.get(day), "Normal pricing (BOSS)"
-    if user_plan.get(s,"FREE") in ["VIP","RESELLER"]:
-        return vip_price.get(day,price.get(day)), "Vip pricing"
+        if s in vip_mode_users: return vip_price.get(day,price.get(day)), "Vip pricing"
+        else: return price.get(day), "Normal pricing (BOSS)"
+    if user_plan.get(s,"FREE") in ["VIP","RESELLER"]: return vip_price.get(day,price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
 def price_list_text(uid=None):
     s=str(uid) if uid else "0"
     if s==str(ADMIN_ID):
-        if s in vip_mode_users:
-            p=vip_price; medal="VIP/Reseller - /normal e 60"
-        else:
-            p=price; medal="FREE (BOSS) - /vip e 40"
-    elif user_plan.get(s,"FREE") in ["VIP","RESELLER"]:
-        p=vip_price; medal="VIP/Reseller"
-    else:
-        p=price; medal="FREE"
-    return f"CARROM\n\nMedal: {medal}\n\nPrice List\n1 Days - Rs.{p['1D']}\n3 Days - Rs.{p['3D']}\n7 Days - Rs.{p['7D']}\n15 Days - Rs.{p['15D']}\n30 Days - Rs.{p['30D']}\n\nSelect plan to purchase."
+        if s in vip_mode_users: p=vip_price; medal="VIP/Reseller 👑 - /normal e 60"
+        else: p=price; medal="FREE (BOSS) 👑 - /vip e 40"
+    elif user_plan.get(s,"FREE") in ["VIP","RESELLER"]: p=vip_price; medal="VIP/Reseller 👑"
+    else: p=price; medal="FREE"
+    return f"🎯 CARROM\n\n👑 Medal: {medal}\n\n📋 Price List\n• 1 Days - Rs.{p['1D']}\n• 3 Days - Rs.{p['3D']}\n• 7 Days - Rs.{p['7D']}\n• 15 Days - Rs.{p['15D']}\n• 30 Days - Rs.{p['30D']}"
 
 def get_stock_text():
-    txt="Live Stock\n\nCARROM\n"
+    txt="📦 Live Stock\n\n🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_carrom.get(d,[])); txt+=f"{'OK' if c>0 else 'NO'} {d} : {c}\n"
-    txt+="\n8 BALL\n"
+        c=len(stock_carrom.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d} : {c}\n"
+    txt+="\n🎱 8 BALL\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_8ball.get(d,[])); txt+=f"{'OK' if c>0 else 'NO'} {d} : {c}\n"
+        c=len(stock_8ball.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d} : {c}\n"
     return txt
 
 def country_kb():
     m=types.InlineKeyboardMarkup()
-    m.add(types.InlineKeyboardButton("India",callback_data="country_India"))
-    m.add(types.InlineKeyboardButton("Bangladesh",callback_data="country_Bangladesh"))
+    m.add(types.InlineKeyboardButton("🇮🇳 India",callback_data="country_India"))
+    m.add(types.InlineKeyboardButton("🇧🇩 Bangladesh",callback_data="country_Bangladesh"))
     return m
 
 def main_kb():
     m=types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
-    m.add("Buy 1 Days","Buy 3 Days","Buy 7 Days","Buy 15 Days","Buy 30 Days","Stock","Add Funds","Balance")
+    m.add(types.KeyboardButton("👑 Buy 1 Days"),types.KeyboardButton("👑 Buy 3 Days"))
+    m.add(types.KeyboardButton("👑 Buy 7 Days"),types.KeyboardButton("👑 Buy 15 Days"))
+    m.add(types.KeyboardButton("👑 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
+    m.add(types.KeyboardButton("➕ Add Funds"),types.KeyboardButton("💰 Balance"))
     return m
 
 def admin_kb():
     m=types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
-    m.add("Add Stock","Delete Stock","Make VIP","Make Reseller","Cancel VIP","Cancel Reseller","Add Balance","Set Price","Broadcast","Stats","Check Stock","Back to Main")
+    m.add(types.KeyboardButton("➕ Add Stock"),types.KeyboardButton("➖ Delete Stock"))
+    m.add(types.KeyboardButton("👑 Make VIP"),types.KeyboardButton("💎 Make Reseller"))
+    m.add(types.KeyboardButton("❌ Cancel VIP"),types.KeyboardButton("❌ Cancel Reseller"))
+    m.add(types.KeyboardButton("💰 Add Balance"),types.KeyboardButton("💵 Set Price"))
+    m.add(types.KeyboardButton("📢 Broadcast"),types.KeyboardButton("📊 Stats"))
+    m.add(types.KeyboardButton("📦 Check Stock"),types.KeyboardButton("🔙 Back to Main"))
     return m
 
 def add_stock_inline_kb():
@@ -95,19 +96,20 @@ def add_stock_inline_kb():
 
 def buy_game_kb(day):
     m=types.InlineKeyboardMarkup(row_width=2)
-    m.add(types.InlineKeyboardButton(f"CARROM {day}",callback_data=f"buy_CARROM_{day}"),types.InlineKeyboardButton(f"8 BALL {day}",callback_data=f"buy_8BALL_{day}"))
-    m.add(types.InlineKeyboardButton("Cancel",callback_data="confirm_no"))
+    m.add(types.InlineKeyboardButton(f"🎯 CARROM {day}",callback_data=f"buy_CARROM_{day}"),types.InlineKeyboardButton(f"🎱 8 BALL {day}",callback_data=f"buy_8BALL_{day}"))
+    m.add(types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
 def confirm_kb():
     m=types.InlineKeyboardMarkup(row_width=2)
-    m.add(types.InlineKeyboardButton("Confirm",callback_data="confirm_yes"),types.InlineKeyboardButton("Cancel",callback_data="confirm_no"))
+    m.add(types.InlineKeyboardButton("✅ Confirm",callback_data="confirm_yes"),types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
 def welcome_text(uid):
     s=str(uid); bal=user_balance.get(s,0); country=user_country.get(s,"India")
-    plan="BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"FREE")
-    return f"Welcome to Koushik Gaming!\n\nPlan: {plan}\nBalance: Rs.{bal}\nCountry: {country}\n\nChannel: @gamingkoushikyt\n\nSelect an option below:"
+    plan="👑 BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"FREE")
+    flag="🇮🇳" if country=="India" else "🇧🇩"
+    return f"👑 Welcome to Koushik Gaming!\n\n👤 Plan: {plan}\n💰 Balance: ₹{bal}\n{flag} Country: {country}\n\n📢 Channel: @gamingkoushikyt\n\n🚀 Select an option below:"
 
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
@@ -115,8 +117,7 @@ def start_cmd(m):
     for d in [pending_add,pending_admin,pending_buy]:
         if uid in d: del d[uid]
     if uid not in user_balance: user_balance[uid]=0.0; save_data()
-    if uid not in user_country:
-        bot.send_message(m.chat.id,"Select country",reply_markup=country_kb())
+    if uid not in user_country: bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
     else:
         if str(m.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"; save_data()
         bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
@@ -125,27 +126,26 @@ def start_cmd(m):
 def vip_cmd(m):
     if m.from_user.id!=ADMIN_ID: return
     vip_mode_users.add(str(m.from_user.id))
-    bot.send_message(m.chat.id,f"VIP MODE ON\n\n{price_list_text(m.from_user.id)}",reply_markup=main_kb())
+    bot.send_message(m.chat.id,f"✅ VIP MODE ON 👑\n\n{price_list_text(m.from_user.id)}",reply_markup=main_kb())
 
-@bot.message_handler(commands=['normal','boss','free'])
+@bot.message_handler(commands=['normal','boss'])
 def normal_cmd(m):
     if m.from_user.id!=ADMIN_ID: return
     vip_mode_users.discard(str(m.from_user.id))
-    bot.send_message(m.chat.id,f"NORMAL MODE ON\n\n{price_list_text(m.from_user.id)}",reply_markup=main_kb())
+    bot.send_message(m.chat.id,f"✅ NORMAL MODE ON 👤\n\n{price_list_text(m.from_user.id)}",reply_markup=main_kb())
 
 @bot.message_handler(commands=['price'])
 def price_cmd(m): bot.send_message(m.chat.id,price_list_text(m.from_user.id),reply_markup=main_kb())
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-    text="Need Help?\n\nContact Admin:\n@koushik_098\n\nWe will reply soon!"
-    bot.send_message(m.chat.id,text,reply_markup=main_kb())
+    bot.send_message(m.chat.id,"🎧 Need Help?\n\nContact Admin:\n👤 @koushik_098\n\n⏰ We will reply soon!",reply_markup=main_kb())
 
 @bot.message_handler(commands=['admin'])
 def admin_cmd(m):
     if m.from_user.id==ADMIN_ID:
         user_plan[str(m.from_user.id)]="BOSS"; save_data()
-        bot.send_message(m.chat.id,"BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
+        bot.send_message(m.chat.id,"👑 BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
@@ -158,40 +158,36 @@ def cb_handler(c):
         except:
             try: bot.edit_message_reply_markup(c.message.chat.id,c.message.message_id,reply_markup=None)
             except: pass
-        try: bot.answer_callback_query(c.id,f"{user_country[uid]} Selected")
+        try: bot.answer_callback_query(c.id,f"✅ {user_country[uid]}")
         except: pass
-        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
-        return
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb()); return
     if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         _,game,day=data.split("_"); pending_add[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"{game} {day} Selected, key pathao"); return
+        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected"); return
     if data.startswith("buy_"):
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
         p,_=get_price(c.from_user.id,day)
-        if len(stock_list)==0:
-            bot.send_message(c.message.chat.id,f"{game} {day} Out of Stock",reply_markup=main_kb()); return
-        pending_buy[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"{game} {day} - Rs.{p}",reply_markup=confirm_kb()); return
+        if len(stock_list)==0: bot.send_message(c.message.chat.id,f"{game} {day} Out of Stock",reply_markup=main_kb()); return
+        pending_buy[uid]=(game,day); bot.send_message(c.message.chat.id,f"🛒 {game} {day} - Rs.{p}",reply_markup=confirm_kb()); return
     if data=="confirm_yes":
         if uid not in pending_buy: return
         game,day=pending_buy[uid]; p,_=get_price(c.from_user.id,day); bal=user_balance.get(uid,0)
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        if len(stock_list)==0 or bal<p:
-            bot.send_message(c.message.chat.id,"Failed! Check Balance/Stock",reply_markup=main_kb()); del pending_buy[uid]; return
+        if len(stock_list)==0 or bal<p: bot.send_message(c.message.chat.id,"Failed! Check Balance/Stock",reply_markup=main_kb()); del pending_buy[uid]; return
         key=stock_list.pop(0); user_balance[uid]=bal-p
         if "CARROM" in game: stock_carrom[day]=stock_list
         else: stock_8ball[day]=stock_list
         save_data(); del pending_buy[uid]
-        bot.send_message(c.message.chat.id,f"Success! Key: {key} Bal: Rs.{user_balance[uid]}",reply_markup=main_kb()); return
+        bot.send_message(c.message.chat.id,f"✅ Success!\n🔑 Key: {key}\n💰 Bal: Rs.{user_balance[uid]}",reply_markup=main_kb()); return
     if data=="confirm_no":
         if uid in pending_buy: del pending_buy[uid]
-        bot.send_message(c.message.chat.id,"Cancelled",reply_markup=main_kb()); return
+        bot.send_message(c.message.chat.id,"❌ Cancelled",reply_markup=main_kb()); return
 
 @bot.message_handler(func=lambda m: m.text and "Add Stock" in m.text)
 def add_stock_btn(m):
-    if m.from_user.id==ADMIN_ID: bot.send_message(m.chat.id,"Select",reply_markup=add_stock_inline_kb())
+    if m.from_user.id==ADMIN_ID: bot.send_message(m.chat.id,"👇 Select",reply_markup=add_stock_inline_kb())
 @bot.message_handler(func=lambda m: m.text and "Delete Stock" in m.text)
 def del_stock_btn(m):
     if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="del_stock"; bot.send_message(m.chat.id,"Format: CARROM 1D")
@@ -200,7 +196,7 @@ def add_bal_btn(m):
     if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="add_bal"; bot.send_message(m.chat.id,"Format: USERID AMOUNT")
 @bot.message_handler(func=lambda m: m.text and "Set Price" in m.text)
 def set_price_btn(m):
-    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="set_price"; bot.send_message(m.chat.id,f"Current {price} Format 1D 60")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="set_price"; bot.send_message(m.chat.id,f"Current {price}")
 @bot.message_handler(func=lambda m: m.text and "Broadcast" in m.text)
 def broadcast_btn(m):
     if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="broadcast"; bot.send_message(m.chat.id,"Broadcast msg")
@@ -222,22 +218,22 @@ def stock_handler(m): bot.send_message(m.chat.id,get_stock_text(),reply_markup=m
 def stats_handler(m):
     if m.from_user.id==ADMIN_ID: bot.send_message(m.chat.id,f"Users {len(user_balance)}",reply_markup=admin_kb())
 @bot.message_handler(func=lambda m: m.text and "Buy 1 Days" in m.text)
-def buy1(m): bot.send_message(m.chat.id,"1 Days Select Game",reply_markup=buy_game_kb("1D"))
+def buy1(m): bot.send_message(m.chat.id,"🎁 1 Days - Select Game",reply_markup=buy_game_kb("1D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 3 Days" in m.text)
-def buy3(m): bot.send_message(m.chat.id,"3 Days Select Game",reply_markup=buy_game_kb("3D"))
+def buy3(m): bot.send_message(m.chat.id,"🎁 3 Days - Select Game",reply_markup=buy_game_kb("3D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 7 Days" in m.text)
-def buy7(m): bot.send_message(m.chat.id,"7 Days Select Game",reply_markup=buy_game_kb("7D"))
+def buy7(m): bot.send_message(m.chat.id,"🎁 7 Days - Select Game",reply_markup=buy_game_kb("7D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 15 Days" in m.text)
-def buy15(m): bot.send_message(m.chat.id,"15 Days Select Game",reply_markup=buy_game_kb("15D"))
+def buy15(m): bot.send_message(m.chat.id,"🎁 15 Days - Select Game",reply_markup=buy_game_kb("15D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
-def buy30(m): bot.send_message(m.chat.id,"30 Days Select Game",reply_markup=buy_game_kb("30D"))
+def buy30(m): bot.send_message(m.chat.id,"🎁 30 Days - Select Game",reply_markup=buy_game_kb("30D"))
 @bot.message_handler(func=lambda m: m.text and "Add Funds" in m.text)
 def add_funds_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     kb=types.InlineKeyboardMarkup(row_width=1)
-    kb.add(types.InlineKeyboardButton("Contact Admin", url="https://wa.me/916296272384"))
-    kb.add(types.InlineKeyboardButton("Join Channel", url="https://t.me/gamingkoushikyt"))
-    bot.send_message(m.chat.id,f"Add Funds ID:{uid} Bal:Rs.{bal} Pay screenshot pathao",reply_markup=kb)
+    kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://wa.me/916296272384"))
+    kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
+    bot.send_message(m.chat.id,f"💳 Add Funds\nID: {uid}\nBal: Rs.{bal}\nPay screenshot pathao",reply_markup=kb)
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
     uid=str(m.from_user.id); task=pending_admin.get(uid); txt=m.text or ""
@@ -281,7 +277,7 @@ def pending_handler(m):
 def bal_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     mode="VIP Rs.40" if str(uid) in vip_mode_users else "Normal Rs.60"
-    bot.send_message(m.chat.id,f"Wallet\nBalance: Rs.{bal}\nPlan: BOSS\nMode: {mode}",reply_markup=main_kb())
+    bot.send_message(m.chat.id,f"💰 Wallet\nBalance: Rs.{bal}\nMode: {mode}",reply_markup=main_kb())
 @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
 def back_main(m):
     uid=str(m.from_user.id)
