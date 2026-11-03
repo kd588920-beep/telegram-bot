@@ -292,15 +292,13 @@ def buy15(m): bot.send_message(m.chat.id,"🎁 15 Days - Select Game",reply_mark
 @bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
 def buy30(m): bot.send_message(m.chat.id,"🎁 30 Days - Select Game",reply_markup=buy_game_kb("30D"))
 
-# --- UPDATED ADD FUNDS WITH YOUR QR ---
 @bot.message_handler(func=lambda m: m.text and "Add Funds" in m.text)
 def add_funds_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     try:
         with open('qr.jpg','rb') as f:
-            bot.send_photo(m.chat.id, f, caption=f"💳 Add Funds\n\n🆔 Your ID: {uid}\n💰 Current Balance: Rs.{bal:.2f}\n\n📱 Scan this QR & Pay\n💵 Jio Payment - 2754\n\n✅ Pay korar por screenshot @koushik_098 e pathao, admin balance add kore debe!\n\n⚠️ Minimum ₹50", reply_markup=types.InlineKeyboardMarkup().add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098")))
-    except Exception as e:
-        print(f"QR Error: {e}")
+            bot.send_photo(m.chat.id, f, caption=f"💳 Add Funds\n\n🆔 Your ID: {uid}\n💰 Balance: Rs.{bal:.2f}\n\n📱 Scan this QR & Pay\n💵 Jio Payment - 2754\n\n✅ Pay korar por screenshot @koushik_098 e pathao, admin balance add kore debe!\n\n⚠️ Minimum ₹50", reply_markup=types.InlineKeyboardMarkup().add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098")))
+    except:
         kb=types.InlineKeyboardMarkup(row_width=1)
         kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098"))
         kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
@@ -332,6 +330,7 @@ def pending_admin_handler(m):
                     if "BALL" in t or "8" in t: stock_8ball[d]=[]; save_data(); bot.send_message(m.chat.id,f"8BALL {d} Cleared")
         del pending_admin[uid]
     except Exception as e: bot.send_message(m.chat.id,f"Error {e}")
+
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_add)
 def pending_handler(m):
     if m.from_user.id!=ADMIN_ID: return
@@ -345,11 +344,13 @@ def pending_handler(m):
         else: stock_8ball[day].append(k)
         added+=1
     save_data(); del pending_add[uid]; bot.send_message(m.chat.id,f"{game} {day} Added {added}")
+
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
 def bal_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     mode="VIP Rs.40" if str(uid) in vip_mode_users else "Normal Rs.60"
     bot.send_message(m.chat.id,f"💰 Wallet\nBalance: Rs.{bal}\nMode: {mode}",reply_markup=main_kb())
+
 @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
 def back_main(m):
     uid=str(m.from_user.id)
@@ -357,4 +358,6 @@ def back_main(m):
         if uid in d: del d[uid]
     bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
-def run_flask(): app.run(host="0.0.0.0",port=int(os.envi
+def run_flask(): app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
+threading.Thread(target=run_flask,daemon=True).start()
+bot.infinity_p
