@@ -217,12 +217,14 @@ def cb_handler(c):
     if data.startswith("buy_"):
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        p,_=get_price(c.from_user.id,day)
+        p,price_type=get_price(c.from_user.id,day)
         if len(stock_list)==0:
             bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock",reply_markup=main_kb())
             return
         pending_buy[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"🛒 {game} {day} - Rs.{p}",reply_markup=confirm_kb())
+        duration_text=day.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
+        txt = f"🛒 Confirm Purchase\n\n🎯 Game: {game}\n⏰ Duration: {duration_text}\n💰 Price: ₹{p:.2f} ({price_type})\n📦 Stock: {len(stock_list)} keys available\n\n👉 Tap ✅ Confirm to proceed or ❌ Cancel to abort."
+        bot.send_message(c.message.chat.id,txt,reply_markup=confirm_kb())
         return
     if data=="confirm_yes":
         if uid not in pending_buy: return
