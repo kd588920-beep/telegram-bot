@@ -38,6 +38,19 @@ def get_price(uid, day):
     if plan=="VIP": return vip_price.get(day, price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
+def price_list_text():
+    return """🎯 CARROM
+
+📋 Price List
+
+- 1 Days - ₹60
+- 3 Days - ₹130
+- 7 Days - ₹180
+- 15 Days - ₹350
+- 30 Days - ₹570
+
+🛒 Select a plan from the main menu to purchase"""
+
 def get_stock_text():
     txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
@@ -111,6 +124,24 @@ def start_cmd(m):
     else:
         if str(m.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"; save_data()
         bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+
+@bot.message_handler(commands=['price','prices'])
+def price_cmd(m):
+    bot.send_message(m.chat.id, price_list_text())
+
+@bot.message_handler(commands=['support','help'])
+def support_cmd(m):
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(types.InlineKeyboardButton("📢 Channel", url="https://t.me/gamingkoushikyt"))
+    kb.add(types.InlineKeyboardButton("👤 Owner", url="https://t.me/KoushikGamingYT"))
+    text = """💬 NEED HELP?
+
+📢 Main Channel: @gamingkoushikyt
+👤 Owner: @KoushikGamingYT
+🤖 Bot: @Koushikgaming09_bot
+
+Message koro, 5 min e reply pabe!"""
+    bot.send_message(m.chat.id, text, reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
