@@ -13,7 +13,6 @@ price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
 vip_price = {"1D":40,"3D":80,"7D":110,"15D":210,"30D":320}
 pending_admin = {}
 pending_buy = {}
-vip_mode_users = set()
 
 def save_data():
     with open("data.json","w") as f:
@@ -35,53 +34,38 @@ app = Flask(__name__)
 def home(): return "KOUSHIK NON STOP BOT LIVE"
 
 def get_price(uid, day):
-    s_uid = str(uid)
-    if s_uid == str(ADMIN_ID):
-        if uid in vip_mode_users or s_uid in vip_mode_users:
-            return vip_price.get(day, price.get(day)), "Vip pricing"
-        try:
-            if int(uid) in vip_mode_users:
-                return vip_price.get(day, price.get(day)), "Vip pricing"
-        except: pass
-        return price.get(day), "Normal pricing"
-    plan=user_plan.get(s_uid,"FREE")
-    if plan=="VIP" or plan=="RESELLER":
+    plan=user_plan.get(str(uid),"FREE")
+    if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
         return vip_price.get(day, price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
 def price_list_text(uid=None):
-    if uid is None:
-        p_dict = price
-        medal = "FREE"
-    else:
-        s_uid = str(uid)
-        is_vip = False
-        if s_uid == str(ADMIN_ID):
-            if s_uid in vip_mode_users or uid in vip_mode_users:
-                is_vip = True
-            try:
-                if int(uid) in vip_mode_users: is_vip=True
-            except: pass
-        else:
-            if user_plan.get(s_uid,"FREE") in ["VIP","RESELLER"]:
-                is_vip=True
-        if is_vip:
-            p_dict=vip_price
+    # Dynamic price based on plan - Shinigami style
+    p_dict = vip_price
+    medal = "FREE"
+    if uid:
+        plan=user_plan.get(str(uid),"FREE")
+        if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
             medal="VIP/Reseller"
+            p_dict=vip_price
         else:
-            p_dict=price
             medal="FREE"
+            p_dict=price
+    else:
+        medal="VIP/Reseller"
+        p_dict=vip_price
+
     return f"""🎯 CARROM
 
 👑 Your Medal: {medal} 👑
 
 📋 Price List
 
-- 1 Days — ₹{p_dict['1D']}
-- 3 Days — ₹{p_dict['3D']}
-- 7 Days — ₹{p_dict['7D']}
-- 15 Days — ₹{p_dict['15D']}
-- 30 Days — ₹{p_dict['30D']}
+• 1 Days — ₹{p_dict['1D']}
+• 3 Days — ₹{p_dict['3D']}
+• 7 Days — ₹{p_dict['7D']}
+• 15 Days — ₹{p_dict['15D']}
+• 30 Days — ₹{p_dict['30D']}
 
 🛒 Select a plan from the main menu to purchase."""
 
@@ -163,46 +147,15 @@ def start_cmd(m):
 def price_cmd(m):
     bot.send_message(m.chat.id, price_list_text(m.from_user.id))
 
-@bot.message_handler(commands=['vip'])
-def vip_cmd(m):
-    if m.from_user.id != ADMIN_ID:
-        bot.send_message(m.chat.id, "❌ Not authorized!")
-        return
-    uid = m.from_user.id
-    s_uid = str(uid)
-    is_on = s_uid in vip_mode_users or uid in vip_mode_users
-    try:
-        if int(uid) in vip_mode_users: is_on=True
-    except: pass
-    if is_on:
-        vip_mode_users.discard(uid)
-        vip_mode_users.discard(s_uid)
-        try: vip_mode_users.discard(int(uid))
-        except: pass
-        bot.send_message(m.chat.id, "✅ VIP Mode OFF\n\n" + price_list_text(m.from_user.id))
-    else:
-        vip_mode_users.add(uid)
-        bot.send_message(m.chat.id, f"""🎯 CARROM
-
-👑 Your Medal: VIP/Reseller 👑
-
-📋 VIP Price List
-
-- 1 Days — ₹{vip_price['1D']}
-- 3 Days — ₹{vip_price['3D']}
-- 7 Days — ₹{vip_price['7D']}
-- 15 Days — ₹{vip_price['15D']}
-- 30 Days — ₹{vip_price['30D']}
-
-🛒 VIP Mode ON - Reseller Rate Active!""")
-
-@bot.message_handler(func=lambda m: m.text and m.text.lower().strip() == "vip")
-def vip_text_cmd(m):
-    return vip_cmd(m)
-
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-    bot.send_message(m.chat.id, "🎧 Need Help?\n\nContact: @koushik_098")
+    text = """🎧 Need Help?
+
+Contact our admin for support:
+👤 @koushik_098
+
+⏰ We will reply as soon as possible!"""
+    bot.send_message(m.chat.id, text)
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
@@ -399,8 +352,45 @@ def pending_handler(m):
     bot.send_message(m.chat.id,f"✅ {game} {day} Added: {added}, Total: {total}")
     bot.send_message(m.chat.id,"👇 Next?",reply_markup=add_stock_inline_kb())
 
+# === SHINIGAMI STYLE WALLET - FINAL ===
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
 def bal_cmd(m):
     uid=str(m.from_user.id)
     bal=user_balance.get(uid,0)
-  
+    plan=user_plan.get(uid,"FREE")
+    
+    if str(m.from_user.id)==str(ADMIN_ID):
+        plan_name="BOSS"
+    elif plan=="VIP":
+        plan_name="Vip"
+    elif plan=="RESELLER":
+        plan_name="Reseller"
+    else:
+        plan_name="Free"
+
+    if plan=="VIP" or plan=="RESELLER" or str(m.from_user.id)==str(ADMIN_ID):
+        vip_text="👑 VIP Pricing Active — You get exclusive reseller rates!"
+    else:
+        vip_text="💡 Upgrade to VIP for exclusive rates!"
+
+    text = f"""💰 Your Wallet
+
+💰 Current Balance: ₹{bal:.2f}
+👑 Current Plan: {plan_name}
+
+{vip_text}
+
+🚀 Top up via ➕ Add Funds to purchase premium keys!"""
+    bot.send_message(m.chat.id, text)
+
+@bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
+def back_main(m):
+    uid=str(m.from_user.id)
+    if uid in pending_add: del pending_add[uid]
+    if uid in pending_admin: del pending_admin[uid]
+    if uid in pending_buy: del pending_buy[uid]
+    bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+
+def run_flask(): app.run(host="0.0.0.0",port=10000)
+threading.Thread(target=run_flask,daemon=True).start()
+bot.infinity_polling()
