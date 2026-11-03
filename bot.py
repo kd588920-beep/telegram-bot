@@ -54,13 +54,14 @@ def price_list_text(uid=None):
     return f"🎯 CARROM\n\n👑 Medal: {medal}\n\n📋 Price List\n• 1 Days - Rs.{p['1D']}\n• 3 Days - Rs.{p['3D']}\n• 7 Days - Rs.{p['7D']}\n• 15 Days - Rs.{p['15D']}\n• 30 Days - Rs.{p['30D']}"
 
 def get_stock_text():
-    txt="📦 Live Stock\n\n🎯 CARROM\n"
-    for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_carrom.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d} : {c}\n"
-    txt+="\n🎱 8 BALL\n"
-    for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_8ball.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d} : {c}\n"
-    return txt
+    def fmt(d):
+        out=""
+        for k in ["1D","3D","7D","15D","30D"]:
+            c=len(d.get(k,[]))
+            name=k.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
+            out+=f"{'✅' if c>0 else '❌'} {name}: {c} keys\n"
+        return out
+    return f"📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n{fmt(stock_carrom)}\n🎱 8 BALL POOL\n{fmt(stock_8ball)}"
 
 def country_kb():
     m=types.InlineKeyboardMarkup()
