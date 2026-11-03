@@ -145,7 +145,7 @@ def price_cmd(m): bot.send_message(m.chat.id,price_list_text(m.from_user.id),rep
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-    bot.send_message(m.chat.id,"🎧 Need Help?\n\nContact Admin:\n👤 @koushik_098\n\n⏰ We will reply soon!",reply_markup=main_kb())
+            bot.send_message(m.chat.id, "🎧 Need Help?\n\nContact our admin for support:\n👤 @koushik_098\n\n⏰ We will reply as soon as possible!", reply_markup=main_kb())
 
 @bot.message_handler(commands=['admin'])
 def admin_cmd(m):
