@@ -182,7 +182,7 @@ def cb_handler(c):
             except: pass
         try: bot.answer_callback_query(c.id,f"✅ {user_country[uid]}")
         except: pass
-            if data.startswith("addsel_"):
+             if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         tmp=data.replace("addsel_","",1)
         if tmp=="GAME_CARROM":
@@ -203,8 +203,8 @@ def cb_handler(c):
         else:
             _,game,day=data.split("_")
         pending_add[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected\nNow send IDs (one per line)")
-        return
+        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected\nNow send IDs")
+        return      
     if data.startswith("buy_"):
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
