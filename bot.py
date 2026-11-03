@@ -131,17 +131,13 @@ def price_cmd(m):
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-    kb = types.InlineKeyboardMarkup(row_width=1)
-    kb.add(types.InlineKeyboardButton("📢 Channel", url="https://t.me/gamingkoushikyt"))
-    kb.add(types.InlineKeyboardButton("👤 Owner", url="https://t.me/KoushikGamingYT"))
-    text = """💬 NEED HELP?
+    text = """🎧 Need Help?
 
-📢 Main Channel: @gamingkoushikyt
-👤 Owner: @KoushikGamingYT
-🤖 Bot: @Koushikgaming09_bot
+Contact our admin for support:
+👤 @koushik_098
 
-Message koro, 5 min e reply pabe!"""
-    bot.send_message(m.chat.id, text, reply_markup=kb)
+⏰ We will reply as soon as possible!"""
+    bot.send_message(m.chat.id, text)
 
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
