@@ -126,7 +126,7 @@ def start_cmd(m):
     if uid not in user_country: bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
     else:
         if str(m.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"; save_data()
-        bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+        bot.send_message(m.chat.id,welcome_text(m.from_user.id, m.from_user.first_name),reply_markup=main_kb())
 
 @bot.message_handler(commands=['vip'])
 def vip_cmd(m):
