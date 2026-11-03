@@ -75,6 +75,7 @@ def main_kb():
     m.add(types.KeyboardButton("👑 Buy 7 Days"),types.KeyboardButton("👑 Buy 15 Days"))
     m.add(types.KeyboardButton("👑 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
     m.add(types.KeyboardButton("➕ Add Funds"),types.KeyboardButton("💰 Balance"))
+        m.add(types.KeyboardButton("📁 Get Files"))
     return m
 
 def admin_kb():
