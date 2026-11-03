@@ -106,10 +106,18 @@ def confirm_kb():
     return m
 
 def welcome_text(uid):
-    s=str(uid); bal=user_balance.get(s,0); country=user_country.get(s,"India")
+    s=str(uid)
+    bal=user_balance.get(s,0)
+    country=user_country.get(s,"India")
     plan="👑 BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"FREE")
-    flag="🇮🇳" if country=="India" else "🇧🇩"
-    return f"👑 Welcome to Koushik Gaming!\n\n👤 Plan: {plan}\n💰 Balance: ₹{bal}\n{flag} Country: {country}\n\n📢 Channel: @gamingkoushikyt\n\n🚀 Select an option below:"
+    flag="🇮🇳" if country=="India" else "🌍"
+    a="👑 Welcome to SHINIGAMI Bot!"
+    b1=f"👤 Plan: {plan}"
+    b2=f"💰 Balance: Rs.{bal}"
+    b3=f"{flag} Country: {country}"
+    b4="📢 Channel: @gamingkoushikyt"
+    b5="🚀 Select an option below:"
+        return chr(10).join(["",a,"",b1,b2,b3,b4,"",b5,""])
 
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
