@@ -107,7 +107,8 @@ def confirm_kb():
     return m
 
 def welcome_text(uid, first_name=None):
-    s=str(uid)
+        s=str(uid)
+    if not first_name: first_name="User"  <- EI LINE TA ADD KORO
     bal=user_balance.get(s,0)
     country=user_country.get(s,"India")
     plan="BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"Bronze")
