@@ -98,7 +98,6 @@ def add_stock_inline_kb():
 def buy_game_kb(day):
     m=types.InlineKeyboardMarkup(row_width=2)
     m.add(types.InlineKeyboardButton(f"🎯 CARROM {day}",callback_data=f"buy_CARROM_{day}"),types.InlineKeyboardButton(f"🎱 8 BALL {day}",callback_data=f"buy_8BALL_{day}"))
-    m.add(types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
 def confirm_kb():
