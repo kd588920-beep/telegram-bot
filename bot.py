@@ -182,7 +182,15 @@ def cb_handler(c):
             except: pass
         try: bot.answer_callback_query(c.id,f"✅ {user_country[uid]}")
         except: pass
-        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb()); return
+        if data=="addsel_GAME_CARROM":
+            bot.edit_message_text("🎯 CARROM STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_carrom_kb())
+            return
+        if data=="addsel_GAME_8BALL":
+            bot.edit_message_text("🎱 8BALL STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_8ball_kb())
+            return
+        if data=="addsel_BACK":
+            bot.edit_message_text("👇 Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
+            return        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb()); return
     if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         _,game,day=data.split("_"); pending_add[uid]=(game,day)
