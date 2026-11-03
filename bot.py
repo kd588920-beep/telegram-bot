@@ -230,8 +230,12 @@ def cb_handler(c):
         if uid not in pending_buy: return
         game,day=pending_buy[uid]; p,_=get_price(c.from_user.id,day); bal=user_balance.get(uid,0)
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        if len(stock_list)==0 or bal<p:
-            bot.send_message(c.message.chat.id,"❌ Failed! Check Balance/Stock",reply_markup=main_kb())
+        if len(stock_list)==0:
+            bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock",reply_markup=main_kb())
+            del pending_buy[uid]
+            return
+        if bal < p:
+            bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\n💰 Required: ₹{p:.2f}\n💰 Your Balance: ₹{bal:.2f}\n\n➕ Top up via ➕ Add Funds.",reply_markup=main_kb())
             del pending_buy[uid]
             return
         key=stock_list.pop(0); user_balance[uid]=bal-p
