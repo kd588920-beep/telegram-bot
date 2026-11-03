@@ -1,9 +1,9 @@
-import os, json, threading
+import os, json, threading, time
 from flask import Flask
 import telebot
 from telebot import types
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8419174100:AAH7p88W9B48yIdc3y2b3m_92Z1amwJmQO0")
 ADMIN_ID = 7189081595
 
 stock_carrom = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
@@ -32,6 +32,13 @@ def load_data():
 
 load_data()
 bot = telebot.TeleBot(BOT_TOKEN)
+# --- FIX 1: Webhook conflict fix for status 134 ---
+try:
+    bot.remove_webhook()
+    time.sleep(1)
+except:
+    pass
+
 app = Flask(__name__)
 @app.route('/')
 def home(): return "KOUSHIK LOGO FINAL LIVE WITH QR"
@@ -296,13 +303,13 @@ def buy30(m): bot.send_message(m.chat.id,"🎁 30 Days - Select Game",reply_mark
 def add_funds_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     try:
-        with open('qr.jpg','rb') as f:
-            bot.send_photo(m.chat.id, f, caption=f"💳 Add Funds\n\n🆔 Your ID: {uid}\n💰 Balance: Rs.{bal:.2f}\n\n📱 Scan this QR & Pay\n💵 Jio Payment - 2754\n\n✅ Pay korar por screenshot @koushik_098 e pathao, admin balance add kore debe!\n\n⚠️ Minimum ₹50", reply_markup=types.InlineKeyboardMarkup().add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098")))
+        with open('qr.jpg','rb') as photo:
+            bot.send_photo(m.chat.id, photo, caption=f"💳 Add Funds\n\n🆔 ID: {uid}\n💰 Balance: Rs.{bal:.2f}\n\n📱 Scan this QR & Pay\n💵 Jio Payment 2754\n\n✅ Pay korar por screenshot @koushik_098 e pathao!", reply_markup=types.InlineKeyboardMarkup().add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098")))
     except:
         kb=types.InlineKeyboardMarkup(row_width=1)
-        kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://t.me/koushik_098"))
+        kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://wa.me/916296272384"))
         kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
-        bot.send_message(m.chat.id,f"💳 Add Funds\nID: {uid}\nBal: Rs.{bal}\n\n❌ QR not found! Please contact admin.",reply_markup=kb)
+        bot.send_message(m.chat.id,f"💳 Add Funds\nID: {uid}\nBal: Rs.{bal}\nPay screenshot pathao",reply_markup=kb)
 
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
@@ -358,6 +365,4 @@ def back_main(m):
         if uid in d: del d[uid]
     bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
-def run_flask(): app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
-threading.Thread(target=run_flask,daemon=True).start()
-bot.infinity_p
+# --- FIX 2 & 3: Render port fix + p
