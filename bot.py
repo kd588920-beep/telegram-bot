@@ -1,4 +1,4 @@
-import os, json, threading, time
+import os, json, threading
 from flask import Flask
 import telebot
 from telebot import types
@@ -11,8 +11,8 @@ stock_8ball = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance = {}; user_country = {}; user_plan = {}; pending_add = {}
 price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
 vip_price = {"1D":40,"3D":80,"7D":110,"15D":210,"30D":320}
-pending_admin = {}
-pending_buy = {}
+pending_admin = {}; pending_buy = {}
+vip_mode_users = set()  # BOSS er toggle
 
 def save_data():
     try:
@@ -33,41 +33,53 @@ load_data()
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 @app.route('/')
-def home(): return "KOUSHIK FINAL COUNTRY FIX LIVE"
+def home(): return "KOUSHIK VIP TOGGLE LIVE"
 
 def get_price(uid, day):
-    plan=user_plan.get(str(uid),"FREE")
-    if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
+    s=str(uid)
+    if s==str(ADMIN_ID):
+        if s in vip_mode_users:
+            return vip_price.get(day, price.get(day)), "Vip pricing"
+        else:
+            return price.get(day), "Normal pricing (BOSS)"
+    plan=user_plan.get(s,"FREE")
+    if plan in ["VIP","RESELLER"]:
         return vip_price.get(day, price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
 def price_list_text(uid=None):
-    p_dict = vip_price
-    medal = "FREE"
-    if uid:
-        plan=user_plan.get(str(uid),"FREE")
-        if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
-            medal="VIP/Reseller"
+    s=str(uid) if uid else "0"
+    if s==str(ADMIN_ID):
+        if s in vip_mode_users:
             p_dict=vip_price
+            medal="VIP/Reseller 👑 - /normal e 60"
         else:
-            medal="FREE"
             p_dict=price
+            medal="FREE (BOSS) - /vip e 40"
+    elif user_plan.get(s,"FREE") in ["VIP","RESELLER"]:
+        p_dict=vip_price; medal="VIP/Reseller 👑"
     else:
-        medal="VIP/Reseller"
-        p_dict=vip_price
-    return f"""🎯 CARROM\n\n👑 Your Medal: {medal} 👑\n\n📋 Price List\n• 1 Days — ₹{p_dict['1D']}\n• 3 Days — ₹{p_dict['3D']}\n• 7 Days — ₹{p_dict['7D']}\n• 15 Days — ₹{p_dict['15D']}\n• 30 Days — ₹{p_dict['30D']}\n\n🛒 Select a plan from the main menu to purchase."""
+        p_dict=price; medal="FREE"
+    return f"""🎯 CARROM
+
+👑 Your Medal: {medal} 👑
+
+📋 Price List
+• 1 Days — ₹{p_dict['1D']}
+• 3 Days — ₹{p_dict['3D']}
+• 7 Days — ₹{p_dict['7D']}
+• 15 Days — ₹{p_dict['15D']}
+• 30 Days — ₹{p_dict['30D']}
+
+🛒 Select a plan from the main menu to purchase."""
 
 def get_stock_text():
-    txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
+    txt="📦 Live Stock\n\n🎯 CARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_carrom.get(d,[]))
-        day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
-        txt+=f"{'✅' if c>0 else '❌'} {day_name}: {c} keys\n"
-    txt+="\n🎱 8 BALL POOL\n"
+        c=len(stock_carrom.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d.replace('D',' Days')}: {c}\n"
+    txt+="\n🎱 8 BALL\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        c=len(stock_8ball.get(d,[]))
-        day_name=d.replace("1D","1 Days").replace("3D","3 Days").replace("7D","7 Days").replace("15D","15 Days").replace("30D","30 Days")
-        txt+=f"{'✅' if c>0 else '❌'} {day_name}: {c} keys\n"
+        c=len(stock_8ball.get(d,[])); txt+=f"{'✅' if c>0 else '❌'} {d.replace('D',' Days')}: {c}\n"
     return txt
 
 def country_kb():
@@ -91,8 +103,7 @@ def admin_kb():
     m.add(types.KeyboardButton("❌ Cancel VIP"),types.KeyboardButton("❌ Cancel Reseller"))
     m.add(types.KeyboardButton("💰 Add Balance"),types.KeyboardButton("💵 Set Price"))
     m.add(types.KeyboardButton("📢 Broadcast"),types.KeyboardButton("📊 Stats"))
-    m.add(types.KeyboardButton("📦 Check Stock"),types.KeyboardButton("👥 Users List"))
-    m.add(types.KeyboardButton("🔙 Back to Main"))
+    m.add(types.KeyboardButton("📦 Check Stock"),types.KeyboardButton("🔙 Back to Main"))
     return m
 
 def add_stock_inline_kb():
@@ -114,7 +125,6 @@ def confirm_kb():
     m.add(types.InlineKeyboardButton("✅ Confirm",callback_data="confirm_yes"),types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
-# FIXED WELCOME TEXT - FLAG DYNAMIC
 def welcome_text(uid):
     uid=str(uid); bal=user_balance.get(uid,0); country=user_country.get(uid,"India")
     plan_text="👑 BOSS" if str(uid)==str(ADMIN_ID) else ("👑 VIP" if user_plan.get(uid)=="VIP" else "💎 RESELLER" if user_plan.get(uid)=="RESELLER" else "👤 FREE")
@@ -124,9 +134,8 @@ def welcome_text(uid):
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
     uid=str(m.from_user.id)
-    if uid in pending_add: del pending_add[uid]
-    if uid in pending_admin: del pending_admin[uid]
-    if uid in pending_buy: del pending_buy[uid]
+    for d in [pending_add, pending_admin, pending_buy]:
+        if uid in d: del d[uid]
     if uid not in user_balance: user_balance[uid]=0.0; save_data()
     if uid not in user_country:
         bot.send_message(m.chat.id,"🌍 Select country",reply_markup=country_kb())
@@ -134,43 +143,51 @@ def start_cmd(m):
         if str(m.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"; save_data()
         bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
+@bot.message_handler(commands=['vip'])
+def vip_cmd(m):
+    if m.from_user.id!=ADMIN_ID: return
+    vip_mode_users.add(str(m.from_user.id))
+    bot.send_message(m.chat.id, f"✅ VIP MODE ON 👑\n\n{price_list_text(m.from_user.id)}", reply_markup=main_kb())
+
+@bot.message_handler(commands=['normal','boss','free'])
+def normal_cmd(m):
+    if m.from_user.id!=ADMIN_ID: return
+    vip_mode_users.discard(str(m.from_user.id))
+    bot.send_message(m.chat.id, f"✅ NORMAL MODE ON 👤\n\n{price_list_text(m.from_user.id)}", reply_markup=main_kb())
+
 @bot.message_handler(commands=['price','prices'])
 def price_cmd(m):
     bot.send_message(m.chat.id, price_list_text(m.from_user.id), reply_markup=main_kb())
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-    text = """🎧 Need Help?\n\nContact our admin for support:\n👤 @koushik_098\n\n⏰ We will reply as soon as possible!"""
-    bot.send_message(m.chat.id, text, reply_markup=main_kb())
+    bot.send_message(m.chat.id, "🎧 Need Help?\nContact: @koushik_098\nWe will reply soon!", reply_markup=main_kb())
 
-# FIXED CB HANDLER - BUTTON GAYEB HOBE
+@bot.message_handler(commands=['admin'])
+def admin_cmd(m):
+    if m.from_user.id==ADMIN_ID:
+        user_plan[str(m.from_user.id)]="BOSS"; save_data()
+        bot.send_message(m.chat.id,"👑 BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
+
 @bot.callback_query_handler(func=lambda c: True)
 def cb_handler(c):
     uid=str(c.from_user.id); data=c.data
     if data.startswith("country_"):
-        # Sothik country save
-        if "Bangladesh" in data:
-            user_country[uid]="Bangladesh"
-        else:
-            user_country[uid]="India"
+        user_country[uid]="Bangladesh" if "Bangladesh" in data else "India"
         if str(c.from_user.id)==str(ADMIN_ID): user_plan[uid]="BOSS"
         save_data()
-        # Button delete koro
-        try:
-            bot.delete_message(c.message.chat.id, c.message.message_id)
+        try: bot.delete_message(c.message.chat.id, c.message.message_id)
         except:
-            try:
-                bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
+            try: bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
             except: pass
-        try:
-            bot.answer_callback_query(c.id, f"✅ {user_country[uid]} Selected!")
+        try: bot.answer_callback_query(c.id, f"✅ {user_country[uid]}")
         except: pass
         bot.send_message(c.message.chat.id,welcome_text(c.from_user.id),reply_markup=main_kb())
         return
     if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         _,game,day=data.split("_"); pending_add[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"✅ **{game} {day} Select Kiya BOSS!**\n\n🔑 **Abb key add kro!**",parse_mode="Markdown")
+        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected! Key pathao")
         bot.answer_callback_query(c.id); return
     if data.startswith("buy_"):
         _,game,day=data.split("_")
@@ -180,148 +197,110 @@ def cb_handler(c):
             bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock!",reply_markup=main_kb())
             bot.answer_callback_query(c.id); return
         pending_buy[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"🛒 Confirm Purchase\n\n🎯 Game: {game}\n⏰ Duration: {day.replace('D',' Days')}\n💰 Price: ₹{p:.2f} ({ptype})\n📦 Stock: {len(stock_list)} keys available\n\n👉 Tap ✅ Confirm to proceed or ❌ Cancel to abort.",reply_markup=confirm_kb())
+        bot.send_message(c.message.chat.id,f"🛒 {game} {day} - ₹{p:.2f} ({ptype})",reply_markup=confirm_kb())
         bot.answer_callback_query(c.id); return
     if data=="confirm_yes":
-        if uid not in pending_buy: bot.answer_callback_query(c.id, "No pending purchase"); return
-        game,day=pending_buy[uid]
-        p, _ = get_price(c.from_user.id, day)
-        bal=user_balance.get(uid,0)
+        if uid not in pending_buy: return
+        game,day=pending_buy[uid]; p,_=get_price(c.from_user.id, day); bal=user_balance.get(uid,0)
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        if len(stock_list)==0:
-            bot.send_message(c.message.chat.id,"❌ Out of Stock now!",reply_markup=main_kb())
-            del pending_buy[uid]; bot.answer_callback_query(c.id); return
-        if bal < p:
-            bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\nRequired: ₹{p:.2f}\nYour Balance: ₹{bal:.2f}\n\n• Top up via ➕ Add Funds.",reply_markup=main_kb())
-            del pending_buy[uid]
-            bot.answer_callback_query(c.id)
-            return
-        key=stock_list.pop(0)
-        user_balance[uid]=bal-p
+        if len(stock_list)==0 or bal<p:
+            bot.send_message(c.message.chat.id,"❌ Failed! Check Balance/Stock",reply_markup=main_kb())
+            del pending_buy[uid]; return
+        key=stock_list.pop(0); user_balance[uid]=bal-p
         if "CARROM" in game: stock_carrom[day]=stock_list
         else: stock_8ball[day]=stock_list
         save_data(); del pending_buy[uid]
-        bot.send_message(c.message.chat.id,f"✅ **Purchase Success!**\n\n🎮 Game: {game}\n📅 Duration: {day}\n🔑 Key: `{key}`\n💰 Deducted: ₹{p:.2f}\n💳 Remaining: ₹{user_balance[uid]:.2f}",parse_mode="Markdown",reply_markup=main_kb())
-        try: bot.send_message(ADMIN_ID,f"💸 SELL: User {uid} bought {game} {day} - ₹{p:.2f}\nKey: {key}")
-        except: pass
-        bot.answer_callback_query(c.id); return
+        bot.send_message(c.message.chat.id,f"✅ Success!\nKey: `{key}`\nBalance: ₹{user_balance[uid]:.2f}",parse_mode="Markdown",reply_markup=main_kb())
+        return
     if data=="confirm_no":
         if uid in pending_buy: del pending_buy[uid]
-        bot.send_message(c.message.chat.id,"❌ Purchase Cancelled!",reply_markup=main_kb())
-        bot.answer_callback_query(c.id); return
+        bot.send_message(c.message.chat.id,"❌ Cancelled",reply_markup=main_kb())
+        return
 
 @bot.message_handler(func=lambda m: m.text and "Add Stock" in m.text)
 def add_stock_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    bot.send_message(m.chat.id,"👇 Konta Add Korbe BOSS?",reply_markup=add_stock_inline_kb())
+    if m.from_user.id==ADMIN_ID: bot.send_message(m.chat.id,"👇 Select",reply_markup=add_stock_inline_kb())
 @bot.message_handler(func=lambda m: m.text and "Delete Stock" in m.text)
 def del_stock_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="del_stock"
-    bot.send_message(m.chat.id,"🗑️ **Delete Format:**\n`CARROM 1D` likhle clear hobe",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="del_stock"; bot.send_message(m.chat.id,"Format: CARROM 1D")
 @bot.message_handler(func=lambda m: m.text and "Add Balance" in m.text)
 def add_bal_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="add_bal"
-    bot.send_message(m.chat.id,"💰 **Format:** `USERID AMOUNT`",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="add_bal"; bot.send_message(m.chat.id,"Format: USERID AMOUNT")
 @bot.message_handler(func=lambda m: m.text and "Set Price" in m.text)
 def set_price_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="set_price"
-    bot.send_message(m.chat.id,f"💵 **Current Price:** {price}\n\n**Format:** `1D 60`",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="set_price"; bot.send_message(m.chat.id,f"Current: {price}\nFormat: 1D 60")
 @bot.message_handler(func=lambda m: m.text and "Broadcast" in m.text)
 def broadcast_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="broadcast"
-    bot.send_message(m.chat.id,"📢 **Broadcast Message Likho:**",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="broadcast"; bot.send_message(m.chat.id,"Broadcast msg likho")
 @bot.message_handler(func=lambda m: m.text and "Make VIP" in m.text and "Cancel" not in m.text)
 def make_vip_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="make_vip"
-    bot.send_message(m.chat.id,"👑 **VIP UserID dou:**",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="make_vip"; bot.send_message(m.chat.id,"VIP UserID")
 @bot.message_handler(func=lambda m: m.text and "Make Reseller" in m.text)
 def make_res_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="make_reseller"
-    bot.send_message(m.chat.id,"💎 **Reseller UserID dou:**",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="make_reseller"; bot.send_message(m.chat.id,"Reseller UserID")
 @bot.message_handler(func=lambda m: m.text and "Cancel VIP" in m.text)
 def cancel_vip_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="cancel_vip"
-    bot.send_message(m.chat.id,"❌ **Cancel VIP UserID dou:**",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="cancel_vip"; bot.send_message(m.chat.id,"Cancel VIP UserID")
 @bot.message_handler(func=lambda m: m.text and "Cancel Reseller" in m.text)
 def cancel_res_btn(m):
-    if m.from_user.id!=ADMIN_ID: return
-    pending_admin[str(m.from_user.id)]="cancel_reseller"
-    bot.send_message(m.chat.id,"❌ **Cancel Reseller UserID dou:**",parse_mode="Markdown")
+    if m.from_user.id==ADMIN_ID: pending_admin[str(m.from_user.id)]="cancel_reseller"; bot.send_message(m.chat.id,"Cancel Reseller UserID")
 @bot.message_handler(func=lambda m: m.text and ("Check Stock" in m.text or m.text=="📦 Stock"))
 def stock_handler(m): bot.send_message(m.chat.id,get_stock_text(),reply_markup=main_kb())
 @bot.message_handler(func=lambda m: m.text and "Stats" in m.text)
 def stats_handler(m):
-    if m.from_user.id!=ADMIN_ID: return
-    total_users=len(user_balance); total_keys=sum([len(v) for v in stock_carrom.values()])+sum([len(v) for v in stock_8ball.values()])
-    bot.send_message(m.chat.id,f"📊 Users: {total_users} Keys: {total_keys}",reply_markup=admin_kb())
-@bot.message_handler(commands=['admin'])
-def admin_cmd(m):
-    if m.from_user.id==ADMIN_ID:
-        user_plan[str(m.from_user.id)]="BOSS"; save_data()
-        bot.send_message(m.chat.id,"👑 BOSS FULL ADMIN PANEL",reply_markup=admin_kb())
+    if m.from_user.id==ADMIN_ID: bot.send_message(m.chat.id,f"Users: {len(user_balance)} Keys: {sum([len(v) for v in stock_carrom.values()])+sum([len(v) for v in stock_8ball.values()])}",reply_markup=admin_kb())
 
 @bot.message_handler(func=lambda m: m.text and "Buy 1 Days" in m.text)
-def buy1(m): bot.send_message(m.chat.id,f"🎁 1 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("1D"))
+def buy1(m): bot.send_message(m.chat.id,"🎁 1 Days - Select Game:",reply_markup=buy_game_kb("1D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 3 Days" in m.text)
-def buy3(m): bot.send_message(m.chat.id,f"🎁 3 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("3D"))
+def buy3(m): bot.send_message(m.chat.id,"🎁 3 Days - Select Game:",reply_markup=buy_game_kb("3D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 7 Days" in m.text)
-def buy7(m): bot.send_message(m.chat.id,f"🎁 7 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("7D"))
+def buy7(m): bot.send_message(m.chat.id,"🎁 7 Days - Select Game:",reply_markup=buy_game_kb("7D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 15 Days" in m.text)
-def buy15(m): bot.send_message(m.chat.id,f"🎁 15 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("15D"))
+def buy15(m): bot.send_message(m.chat.id,"🎁 15 Days - Select Game:",reply_markup=buy_game_kb("15D"))
 @bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
-def buy30(m): bot.send_message(m.chat.id,f"🎁 30 Days Plan Selected\n\n🎮 Select a Game:",reply_markup=buy_game_kb("30D"))
+def buy30(m): bot.send_message(m.chat.id,"🎁 30 Days - Select Game:",reply_markup=buy_game_kb("30D"))
 
 @bot.message_handler(func=lambda m: m.text and "Add Funds" in m.text)
 def add_funds_cmd(m):
-    uid=str(m.from_user.id)
-    bal=user_balance.get(uid,0)
+    uid=str(m.from_user.id); bal=user_balance.get(uid,0)
     kb=types.InlineKeyboardMarkup(row_width=1)
     kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://wa.me/916296272384"))
     kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
-    caption=f"""💳 **Add Funds**\n\n👤 ID: `{uid}`\n💰 Balance: ₹{bal:.2f}\n\n💵 **Scan QR & Pay**\n📱 Jio Payment - Auto UPI\n\n⚠️ **Pay kore screenshot + ID pathao Admin ke!**\n✅ **2-5 min e balance add hobe!**"""
+    caption=f"💳 Add Funds\nID: {uid}\nBalance: ₹{bal:.2f}\n\nPay kore screenshot pathao!"
     try:
         with open("qr.jpg","rb") as photo:
-            bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="Markdown", reply_markup=kb)
-    except Exception as e:
-        print(f"QR Error: {e}")
-        bot.send_message(m.chat.id, caption+"\n\n❌ QR missing - Admin ke bolo!", parse_mode="Markdown", reply_markup=kb)
+            bot.send_photo(m.chat.id, photo, caption=caption, reply_markup=kb)
+    except:
+        bot.send_message(m.chat.id, caption, reply_markup=kb)
 
-@bot.message_handler(func=lambda m: m.text and str(m.from_user.id) in pending_admin)
+@bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
     uid=str(m.from_user.id); task=pending_admin.get(uid); txt=m.text or ""
-    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
+    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Buy","Balance","Add Funds","/start","/admin","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
     try:
         if task=="add_bal":
             parts=txt.split(); target=parts[0]; amt=float(parts[1])
             user_balance[target]=user_balance.get(target,0)+amt; save_data()
-            bot.send_message(m.chat.id,f"✅ Added ₹{amt:.2f} to {target}")
+            bot.send_message(m.chat.id,f"✅ Added ₹{amt} to {target}")
         elif task=="set_price":
             parts=txt.split(); day=parts[0].upper(); p=int(parts[1]); price[day]=p; save_data()
             bot.send_message(m.chat.id,f"✅ Price {day} = ₹{p}")
         elif task=="broadcast":
-            count=0
+            c=0
             for u in user_balance.keys():
-                try: bot.send_message(int(u),f"📢 {txt}",parse_mode="Markdown"); count+=1
+                try: bot.send_message(int(u),f"📢 {txt}"); c+=1
                 except: pass
-            bot.send_message(m.chat.id,f"✅ Broadcast to {count}")
-        elif task=="make_vip": user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} VIP - Price 40,80,110,210,320")
-        elif task=="make_reseller": user_plan[txt.strip()]="RESELLER"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} RESELLER")
-        elif task=="cancel_vip" or task=="cancel_reseller": user_plan[txt.strip()]="FREE"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} FREE - Price 60")
+            bot.send_message(m.chat.id,f"✅ Broadcast {c}")
+        elif task=="make_vip": user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt} VIP")
+        elif task=="make_reseller": user_plan[txt.strip()]="RESELLER"; save_data(); bot.send_message(m.chat.id,f"✅ {txt} RESELLER")
+        elif task=="cancel_vip" or task=="cancel_reseller": user_plan[txt.strip()]="FREE"; save_data(); bot.send_message(m.chat.id,f"✅ {txt} FREE")
         elif task=="del_stock":
             t=txt.upper()
-            if "CARROM" in t:
-                for d in ["1D","3D","7D","15D","30D"]:
-                    if d in t: stock_carrom[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ CARROM {d} Cleared")
-            if "BALL" in t or "8" in t:
-                for d in ["1D","3D","7D","15D","30D"]:
-                    if d in t: stock_8ball[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ 8BALL {d} Cleared")
+            for d in ["1D","3D","7D","15D","30D"]:
+                if d in t:
+                    if "CARROM" in t: stock_carrom[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ CARROM {d} Cleared")
+                    if "BALL" in t or "8" in t: stock_8ball[d]=[]; save_data(); bot.send_message(m.chat.id,f"✅ 8BALL {d} Cleared")
         del pending_admin[uid]
     except Exception as e: bot.send_message(m.chat.id,f"❌ Error: {e}")
 
@@ -331,7 +310,7 @@ def pending_handler(m):
     uid=str(m.from_user.id)
     if uid not in pending_add: return
     txt=m.text or ""
-    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Users List","Buy","Balance","Add Funds","/start","/admin","Check Stock","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
+    if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Buy","Balance","Add Funds","/start","/admin","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
     game,day=pending_add[uid]; keys=txt.strip().split("\n"); added=0
     for k in keys:
         k=k.strip()
@@ -346,30 +325,15 @@ def pending_handler(m):
 
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
 def bal_cmd(m):
-    uid=str(m.from_user.id)
-    bal=user_balance.get(uid,0)
-    plan=user_plan.get(uid,"FREE")
-    if str(m.from_user.id)==str(ADMIN_ID):
-        plan_name="BOSS"
-    elif plan=="VIP":
-        plan_name="Vip"
-    elif plan=="RESELLER":
-        plan_name="Reseller"
-    else:
-        plan_name="Free"
-    if plan=="VIP" or plan=="RESELLER" or str(m.from_user.id)==str(ADMIN_ID):
-        vip_text="👑 VIP Pricing Active — You get exclusive reseller rates!"
-    else:
-        vip_text="💡 Upgrade to VIP for exclusive rates!"
-    text = f"""💰 Your Wallet\n\n💰 Current Balance: ₹{bal:.2f}\n👑 Current Plan: {plan_name}\n\n{vip_text}\n\n🚀 Top up via ➕ Add Funds to purchase premium keys!"""
-    bot.send_message(m.chat.id, text, reply_markup=main_kb())
+    uid=str(m.from_user.id); bal=user_balance.get(uid,0); plan=user_plan.get(uid,"FREE")
+    plan_name="BOSS" if str(m.from_user.id)==str(ADMIN_ID) else plan
+    bot.send_message(m.chat.id, f"💰 Wallet\nBalance: ₹{bal:.2f}\nPlan: {plan_name}\n\nMode: {'VIP ₹40' if str(uid) in vip_mode_users else 'Normal ₹60'}", reply_markup=main_kb())
 
 @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
 def back_main(m):
     uid=str(m.from_user.id)
-    if uid in pending_add: del pending_add[uid]
-    if uid in pending_admin: del pending_admin[uid]
-    if uid in pending_buy: del pending_buy[uid]
+    for d in [pending_add, pending_admin, pending_buy]: 
+        if uid in d: del d[uid]
     bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
 def run_flask(): app.run(host="0.0.0.0",port=10000)
