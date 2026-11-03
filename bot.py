@@ -71,11 +71,11 @@ def country_kb():
 
 def main_kb():
     m=types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
-    m.add(types.KeyboardButton("👑 Buy 1 Days"),types.KeyboardButton("👑 Buy 3 Days"))
-    m.add(types.KeyboardButton("👑 Buy 7 Days"),types.KeyboardButton("👑 Buy 15 Days"))
-    m.add(types.KeyboardButton("👑 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
+    m.add(types.KeyboardButton("🚀 Buy 1 Days"),types.KeyboardButton("🚀 Buy 3 Days"))
+    m.add(types.KeyboardButton("🚀 Buy 7 Days"),types.KeyboardButton("🚀 Buy 15 Days"))
+    m.add(types.KeyboardButton("🚀 Buy 30 Days"),types.KeyboardButton("📦 Stock"))
     m.add(types.KeyboardButton("➕ Add Funds"),types.KeyboardButton("💰 Balance"))
-        m.add(types.KeyboardButton("📁 Get Files"))
+    m.add(types.KeyboardButton("📁 Get Files"))
     return m
 
 def admin_kb():
