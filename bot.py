@@ -105,20 +105,18 @@ def confirm_kb():
     m.add(types.InlineKeyboardButton("✅ Confirm",callback_data="confirm_yes"),types.InlineKeyboardButton("❌ Cancel",callback_data="confirm_no"))
     return m
 
-def welcome_text(uid):
+def welcome_text(uid, first_name="User"):
     s=str(uid)
     bal=user_balance.get(s,0)
     country=user_country.get(s,"India")
-    plan="👑 BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"FREE")
-    flag="🇮🇳" if country=="India" else "🌍"
-    a="👑 Welcome to SHINIGAMI Bot!"
-    b1=f"👤 Plan: {plan}"
-    b2=f"💰 Balance: Rs.{bal}"
-    b3=f"{flag} Country: {country}"
-    b4="📢 Channel: @gamingkoushikyt"
-    b5="🚀 Select an option below:"
-        return chr(10).join(["",a,"",b1,b2,b3,b4,"",b5,""])
-
+    plan="BOSS" if s==str(ADMIN_ID) else user_plan.get(s,"Bronze")
+    a="Welcome to SHINIGAMI Bot!"
+    b1=f"Name: {first_name}"
+    b2=f"Plan: {plan}"
+    b3=f"Balance: Rs.{bal:.2f}"
+    b4=f"Country: {country}"
+    b5="Select an option below to get started:"
+    return chr(10).join(["",a,"",b1,b2,b3,b4,"",b5,""])
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
     uid=str(m.from_user.id)
