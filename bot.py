@@ -89,11 +89,23 @@ def admin_kb():
     return m
 
 def add_stock_inline_kb():
+    m=types.InlineKeyboardMarkup(row_width=2)
+    m.add(types.InlineKeyboardButton("🎯 CARROM STOCK POLL",callback_data="addsel_GAME_CARROM"))
+    m.add(types.InlineKeyboardButton("🎱 8BALL STOCK POLL",callback_data="addsel_GAME_8BALL"))
+    return m
+
+def add_stock_carrom_kb():
     m=types.InlineKeyboardMarkup(row_width=3)
     m.add(types.InlineKeyboardButton("🎯 CARROM 1D",callback_data="addsel_CARROM_1D"),types.InlineKeyboardButton("🎯 CARROM 3D",callback_data="addsel_CARROM_3D"),types.InlineKeyboardButton("🎯 CARROM 7D",callback_data="addsel_CARROM_7D"))
     m.add(types.InlineKeyboardButton("🎯 CARROM 15D",callback_data="addsel_CARROM_15D"),types.InlineKeyboardButton("🎯 CARROM 30D",callback_data="addsel_CARROM_30D"))
+    m.add(types.InlineKeyboardButton("🔙 Back",callback_data="addsel_BACK"))
+    return m
+
+def add_stock_8ball_kb():
+    m=types.InlineKeyboardMarkup(row_width=3)
     m.add(types.InlineKeyboardButton("🎱 8BALL 1D",callback_data="addsel_8BALL_1D"),types.InlineKeyboardButton("🎱 8BALL 3D",callback_data="addsel_8BALL_3D"),types.InlineKeyboardButton("🎱 8BALL 7D",callback_data="addsel_8BALL_7D"))
     m.add(types.InlineKeyboardButton("🎱 8BALL 15D",callback_data="addsel_8BALL_15D"),types.InlineKeyboardButton("🎱 8BALL 30D",callback_data="addsel_8BALL_30D"))
+    m.add(types.InlineKeyboardButton("🔙 Back",callback_data="addsel_BACK"))
     return m
 
 def buy_game_kb(day):
