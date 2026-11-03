@@ -1,7 +1,8 @@
-import os, json, threading
+import os, json, threading, random, string
 from flask import Flask
 import telebot
 from telebot import types
+import qrcode
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 7189081595
@@ -9,7 +10,7 @@ ADMIN_ID = 7189081595
 stock_carrom = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 stock_8ball = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance = {}; user_country = {}; user_plan = {}
-pending_add = {}; pending_admin = {}; pending_buy = {}
+pending_add = {}; pending_admin = {}; pending_buy = {}; pending_funds = {}
 price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
 vip_price = {"1D":40,"3D":80,"7D":110,"15D":210,"30D":320}
 vip_mode_users = set()
@@ -35,6 +36,9 @@ bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 @app.route('/')
 def home(): return "KOUSHIK LOGO FINAL LIVE"
+
+def gen_order_id():
+    return ''.join(random.choices(string.ascii_uppercase+string.digits, k=20))
 
 def get_price(uid, day):
     s=str(uid)
@@ -134,6 +138,32 @@ def welcome_text(uid, first_name=None):
     b5="Select an option below to get started:"
     return chr(10).join(["",a,"",b1,b2,b3,b4,"",b5,""])
 
+def add_funds_qr(chat_id, uid, amount):
+    order_id=gen_order_id()
+    pending_funds[uid]=(amount, order_id)
+    UPI_ID="koushik@ybl"
+    upi_url=f"upi://pay?pa={UPI_ID}&pn=SHINIGAMI&am={amount}&cu=INR&tn={order_id}"
+    img=qrcode.make(upi_url)
+    path=f"/tmp/{order_id}.png"
+    img.save(path)
+    cap=(
+        f"💳 Pay via UPI\n\n"
+        f"1️⃣ 👀 Scan the QR code\n"
+        f"2️⃣ 💰 Complete your payment\n"
+        f"3️⃣ 🔄 Payment automatically detect & add ho jayega\n\n"
+        f"📌 Order ID: {order_id}\n"
+        f"⏰ Timer: 300s\n\n"
+        f"⚠️ Jitna payment karna hai, utna hi pay karein.\n"
+        f"Payment automatically verify hokar balance mein add ho jayega.\n\n"
+        f"⏰ Timer: 5:00\n"
+        f"🔄 Auto-checking every 2 seconds...\n"
+        f"✅ Ready to receive payment"
+    )
+    kb=types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("❌ Cancel Add Funds",callback_data="cancel_funds"))
+    with open(path,'rb') as p:
+        bot.send_photo(chat_id, p, caption=cap, reply_markup=kb)
+
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
     uid=str(m.from_user.id)
@@ -185,6 +215,14 @@ def cb_handler(c):
         except: pass
         bot.send_message(c.message.chat.id,welcome_text(c.from_user.id,c.from_user.first_name),reply_markup=main_kb())
         return
+    if data.startswith("addfund_"):
+        amt=int(data.replace("addfund_",""))
+        add_funds_qr(c.message.chat.id, uid, amt)
+        return
+    if data=="cancel_funds":
+        if uid in pending_funds: del pending_funds[uid]
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id,c.from_user.first_name),reply_markup=main_kb())
+        return
     if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         tmp=data.replace("addsel_","",1)
@@ -198,17 +236,9 @@ def cb_handler(c):
             bot.edit_message_text("👇 Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
             return
         if tmp.startswith("CARROM_"):
-            game="CARROM"
-            day=tmp.replace("CARROM_","",1)
+            game="CARROM"; day=tmp.replace("CARROM_","",1)
         elif tmp.startswith("8BALL_"):
-            game="8BALL"
-            day=tmp.replace("8BALL_","",1)
-        elif tmp.startswith("GAME_CARROM_"):
-            game="GAME_CARROM"
-            day=tmp.replace("GAME_CARROM_","",1)
-        elif tmp.startswith("GAME_8BALL_"):
-            game="GAME_8BALL"
-            day=tmp.replace("GAME_8BALL_","",1)
+            game="8BALL"; day=tmp.replace("8BALL_","",1)
         else:
             _,game,day=data.split("_")
         pending_add[uid]=(game,day)
@@ -232,12 +262,10 @@ def cb_handler(c):
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
         if len(stock_list)==0:
             bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock",reply_markup=main_kb())
-            del pending_buy[uid]
-            return
+            del pending_buy[uid]; return
         if bal < p:
             bot.send_message(c.message.chat.id,f"❌ Insufficient Balance!\n\n💰 Required: ₹{p:.2f}\n💰 Your Balance: ₹{bal:.2f}\n\n➕ Top up via ➕ Add Funds.",reply_markup=main_kb())
-            del pending_buy[uid]
-            return
+            del pending_buy[uid]; return
         key=stock_list.pop(0); user_balance[uid]=bal-p
         if "CARROM" in game: stock_carrom[day]=stock_list
         else: stock_8ball[day]=stock_list
@@ -294,10 +322,12 @@ def buy30(m): bot.send_message(m.chat.id,"🎁 30 Days - Select Game",reply_mark
 @bot.message_handler(func=lambda m: m.text and "Add Funds" in m.text)
 def add_funds_cmd(m):
     uid=str(m.from_user.id); bal=user_balance.get(uid,0)
-    kb=types.InlineKeyboardMarkup(row_width=1)
-    kb.add(types.InlineKeyboardButton("📞 Contact Admin", url="https://wa.me/916296272384"))
-    kb.add(types.InlineKeyboardButton("📢 Join Channel", url="https://t.me/gamingkoushikyt"))
-    bot.send_message(m.chat.id,f"💳 Add Funds\nID: {uid}\nBal: Rs.{bal}\nPay screenshot pathao",reply_markup=kb)
+    kb=types.InlineKeyboardMarkup(row_width=2)
+    kb.add(types.InlineKeyboardButton("₹60",callback_data="addfund_60"),types.InlineKeyboardButton("₹100",callback_data="addfund_100"))
+    kb.add(types.InlineKeyboardButton("₹200",callback_data="addfund_200"),types.InlineKeyboardButton("₹500",callback_data="addfund_500"))
+    kb.add(types.InlineKeyboardButton("₹1000",callback_data="addfund_1000"))
+    bot.send_message(m.chat.id,f"💳 Add Funds\nID: {uid}\nBal: Rs.{bal}\n👇 Select Amount:",reply_markup=kb)
+
 @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_admin)
 def pending_admin_handler(m):
     uid=str(m.from_user.id); task=pending_admin.get(uid); txt=m.text or ""
@@ -333,22 +363,4 @@ def pending_handler(m):
     if any(x in txt for x in ["Add Stock","Delete Stock","Make VIP","Reseller","Cancel","Back to Main","Buy","Balance","Add Funds","/start","/admin","Stock","Add Balance","Broadcast","Set Price","Stats"]): return
     game,day=pending_add[uid]; keys=[k.strip() for k in txt.split("\n") if k.strip()]; added=0
     for k in keys:
-        if "CARROM" in game: stock_carrom[day].append(k)
-        else: stock_8ball[day].append(k)
-        added+=1
-    save_data(); del pending_add[uid]; bot.send_message(m.chat.id,f"{game} {day} Added {added}")
-@bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
-def bal_cmd(m):
-    uid=str(m.from_user.id); bal=user_balance.get(uid,0)
-    mode="VIP Rs.40" if str(uid) in vip_mode_users else "Normal Rs.60"
-    bot.send_message(m.chat.id,f"💰 Wallet\nBalance: Rs.{bal}\nMode: {mode}",reply_markup=main_kb())
-@bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
-def back_main(m):
-    uid=str(m.from_user.id)
-    for d in [pending_add,pending_admin,pending_buy]:
-        if uid in d: del d[uid]
-    bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
-
-def run_flask(): app.run(host="0.0.0.0",port=10000)
-threading.Thread(target=run_flask,daemon=True).start()
-bot.infinity_polling()
+        if "CARROM" in game: stock_carro
