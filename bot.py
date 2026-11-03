@@ -133,6 +133,7 @@ def welcome_text(uid, first_name=None):
     b4=f"Country: {country}"
     b5="Select an option below to get started:"
     return chr(10).join(["",a,"",b1,b2,b3,b4,"",b5,""])
+
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
     uid=str(m.from_user.id)
@@ -161,7 +162,7 @@ def price_cmd(m): bot.send_message(m.chat.id,price_list_text(m.from_user.id),rep
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
-            bot.send_message(m.chat.id, "🎧 Need Help?\n\nContact our admin for support:\n👤 @koushik_098\n\n⏰ We will reply as soon as possible!", reply_markup=main_kb())
+    bot.send_message(m.chat.id, "🎧 Need Help?\n\nContact our admin for support:\n👤 @koushik_098\n\n⏰ We will reply as soon as possible!", reply_markup=main_kb())
 
 @bot.message_handler(commands=['admin'])
 def admin_cmd(m):
@@ -182,19 +183,27 @@ def cb_handler(c):
             except: pass
         try: bot.answer_callback_query(c.id,f"✅ {user_country[uid]}")
         except: pass
-         if data.startswith("addsel_"):
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id,c.from_user.first_name),reply_markup=main_kb())
+        return
+    if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         tmp=data.replace("addsel_","",1)
         if tmp=="GAME_CARROM":
-            bot.edit_message_text("CARROM STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_carrom_kb())
+            bot.edit_message_text("🎯 CARROM STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_carrom_kb())
             return
         if tmp=="GAME_8BALL":
-            bot.edit_message_text("8BALL STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_8ball_kb())
+            bot.edit_message_text("🎱 8BALL STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_8ball_kb())
             return
         if tmp=="BACK":
-            bot.edit_message_text("Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
+            bot.edit_message_text("👇 Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
             return
-        if tmp.startswith("GAME_CARROM_"):
+        if tmp.startswith("CARROM_"):
+            game="CARROM"
+            day=tmp.replace("CARROM_","",1)
+        elif tmp.startswith("8BALL_"):
+            game="8BALL"
+            day=tmp.replace("8BALL_","",1)
+        elif tmp.startswith("GAME_CARROM_"):
             game="GAME_CARROM"
             day=tmp.replace("GAME_CARROM_","",1)
         elif tmp.startswith("GAME_8BALL_"):
@@ -203,27 +212,36 @@ def cb_handler(c):
         else:
             _,game,day=data.split("_")
         pending_add[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"{game} {day} Selected\nNow send IDs")
+        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected\nNow send IDs")
         return
-    if data.startswith("buy_"):        
+    if data.startswith("buy_"):
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
         p,_=get_price(c.from_user.id,day)
-        if len(stock_list)==0: bot.send_message(c.message.chat.id,f"{game} {day} Out of Stock",reply_markup=main_kb()); return
-        pending_buy[uid]=(game,day); bot.send_message(c.message.chat.id,f"🛒 {game} {day} - Rs.{p}",reply_markup=confirm_kb()); return
+        if len(stock_list)==0:
+            bot.send_message(c.message.chat.id,f"❌ {game} {day} Out of Stock",reply_markup=main_kb())
+            return
+        pending_buy[uid]=(game,day)
+        bot.send_message(c.message.chat.id,f"🛒 {game} {day} - Rs.{p}",reply_markup=confirm_kb())
+        return
     if data=="confirm_yes":
         if uid not in pending_buy: return
         game,day=pending_buy[uid]; p,_=get_price(c.from_user.id,day); bal=user_balance.get(uid,0)
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
-        if len(stock_list)==0 or bal<p: bot.send_message(c.message.chat.id,"Failed! Check Balance/Stock",reply_markup=main_kb()); del pending_buy[uid]; return
+        if len(stock_list)==0 or bal<p:
+            bot.send_message(c.message.chat.id,"❌ Failed! Check Balance/Stock",reply_markup=main_kb())
+            del pending_buy[uid]
+            return
         key=stock_list.pop(0); user_balance[uid]=bal-p
         if "CARROM" in game: stock_carrom[day]=stock_list
         else: stock_8ball[day]=stock_list
         save_data(); del pending_buy[uid]
-        bot.send_message(c.message.chat.id,f"✅ Success!\n🔑 Key: {key}\n💰 Bal: Rs.{user_balance[uid]}",reply_markup=main_kb()); return
+        bot.send_message(c.message.chat.id,f"✅ Success!\n🔑 Key: {key}\n💰 Bal: Rs.{user_balance[uid]}",reply_markup=main_kb())
+        return
     if data=="confirm_no":
         if uid in pending_buy: del pending_buy[uid]
-        bot.send_message(c.message.chat.id,"❌ Cancelled",reply_markup=main_kb()); return
+        bot.send_message(c.message.chat.id,"❌ Cancelled",reply_markup=main_kb())
+        return
 
 @bot.message_handler(func=lambda m: m.text and "Add Stock" in m.text)
 def add_stock_btn(m):
