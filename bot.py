@@ -193,8 +193,16 @@ def cb_handler(c):
             return      
     if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
-        _,game,day=data.split("_"); pending_add[uid]=(game,day)
+                tmp=data.replace("addsel_","",1)
+        if tmp.startswith("GAME_CARROM_"):
+            game="GAME_CARROM"; day=tmp.replace("GAME_CARROM_","",1)
+        elif tmp.startswith("GAME_8BALL_"):
+            game="GAME_8BALL"; day=tmp.replace("GAME_8BALL_","",1)
+        else:
+            _,game,day=data.split("_")
+                pending_add[uid]=(game,day)
         bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected"); return
+     
     if data.startswith("buy_"):
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
