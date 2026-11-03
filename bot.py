@@ -246,7 +246,7 @@ def cb_handler(c):
         return
     if data=="confirm_no":
         if uid in pending_buy: del pending_buy[uid]
-        bot.send_message(c.message.chat.id,"❌ Cancelled",reply_markup=main_kb())
+        bot.send_message(c.message.chat.id,welcome_text(c.from_user.id,c.from_user.first_name),reply_markup=main_kb())
         return
 
 @bot.message_handler(func=lambda m: m.text and "Add Stock" in m.text)
