@@ -1,4 +1,4 @@
 pyTelegramBotAPI
 Flask
-qrcode[pil]
+qrcode
 Pillow
