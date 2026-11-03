@@ -10,7 +10,7 @@ stock_carrom = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 stock_8ball = {"1D":[],"3D":[],"7D":[],"15D":[],"30D":[]}
 user_balance = {}; user_country = {}; user_plan = {}; pending_add = {}
 price = {"1D":60,"3D":130,"7D":180,"15D":350,"30D":570}
-vip_price = {"1D":40,"3D":90,"7D":130,"15D":250,"30D":400}
+vip_price = {"1D":40,"3D":80,"7D":110,"15D":210,"30D":320}
 pending_admin = {}
 pending_buy = {}
 
@@ -35,21 +35,39 @@ def home(): return "KOUSHIK NON STOP BOT LIVE"
 
 def get_price(uid, day):
     plan=user_plan.get(str(uid),"FREE")
-    if plan=="VIP": return vip_price.get(day, price.get(day)), "Vip pricing"
+    if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
+        return vip_price.get(day, price.get(day)), "Vip pricing"
     return price.get(day), "Normal pricing"
 
-def price_list_text():
-    return """🎯 CARROM
+def price_list_text(uid=None):
+    # Dynamic price based on plan - Shinigami style
+    p_dict = vip_price
+    medal = "FREE"
+    if uid:
+        plan=user_plan.get(str(uid),"FREE")
+        if plan=="VIP" or plan=="RESELLER" or str(uid)==str(ADMIN_ID):
+            medal="VIP/Reseller"
+            p_dict=vip_price
+        else:
+            medal="FREE"
+            p_dict=price
+    else:
+        medal="VIP/Reseller"
+        p_dict=vip_price
+
+    return f"""🎯 CARROM
+
+👑 Your Medal: {medal} 👑
 
 📋 Price List
 
-- 1 Days - ₹60
-- 3 Days - ₹130
-- 7 Days - ₹180
-- 15 Days - ₹350
-- 30 Days - ₹570
+• 1 Days — ₹{p_dict['1D']}
+• 3 Days — ₹{p_dict['3D']}
+• 7 Days — ₹{p_dict['7D']}
+• 15 Days — ₹{p_dict['15D']}
+• 30 Days — ₹{p_dict['30D']}
 
-🛒 Select a plan from the main menu to purchase"""
+🛒 Select a plan from the main menu to purchase."""
 
 def get_stock_text():
     txt="📦 Live Stock Status\n━━━━━━━━━━━━\n\n🎯 CARROM\n"
@@ -127,7 +145,7 @@ def start_cmd(m):
 
 @bot.message_handler(commands=['price','prices'])
 def price_cmd(m):
-    bot.send_message(m.chat.id, price_list_text())
+    bot.send_message(m.chat.id, price_list_text(m.from_user.id))
 
 @bot.message_handler(commands=['support','help'])
 def support_cmd(m):
@@ -301,7 +319,7 @@ def pending_admin_handler(m):
                 try: bot.send_message(int(u),f"📢 {txt}",parse_mode="Markdown"); count+=1
                 except: pass
             bot.send_message(m.chat.id,f"✅ Broadcast to {count}")
-        elif task=="make_vip": user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} VIP - Price 40")
+        elif task=="make_vip": user_plan[txt.strip()]="VIP"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} VIP - Price 40,80,110,210,320")
         elif task=="make_reseller": user_plan[txt.strip()]="RESELLER"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} RESELLER")
         elif task=="cancel_vip" or task=="cancel_reseller": user_plan[txt.strip()]="FREE"; save_data(); bot.send_message(m.chat.id,f"✅ {txt.strip()} FREE - Price 60")
         elif task=="del_stock":
@@ -334,8 +352,37 @@ def pending_handler(m):
     bot.send_message(m.chat.id,f"✅ {game} {day} Added: {added}, Total: {total}")
     bot.send_message(m.chat.id,"👇 Next?",reply_markup=add_stock_inline_kb())
 
+# === SHINIGAMI STYLE WALLET - FINAL ===
 @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
-def bal_cmd(m): bot.send_message(m.chat.id,f"💰 Balance: ₹{user_balance.get(str(m.from_user.id),0):.2f}")
+def bal_cmd(m):
+    uid=str(m.from_user.id)
+    bal=user_balance.get(uid,0)
+    plan=user_plan.get(uid,"FREE")
+    
+    if str(m.from_user.id)==str(ADMIN_ID):
+        plan_name="BOSS"
+    elif plan=="VIP":
+        plan_name="Vip"
+    elif plan=="RESELLER":
+        plan_name="Reseller"
+    else:
+        plan_name="Free"
+
+    if plan=="VIP" or plan=="RESELLER" or str(m.from_user.id)==str(ADMIN_ID):
+        vip_text="👑 VIP Pricing Active — You get exclusive reseller rates!"
+    else:
+        vip_text="💡 Upgrade to VIP for exclusive rates!"
+
+    text = f"""💰 Your Wallet
+
+💰 Current Balance: ₹{bal:.2f}
+👑 Current Plan: {plan_name}
+
+{vip_text}
+
+🚀 Top up via ➕ Add Funds to purchase premium keys!"""
+    bot.send_message(m.chat.id, text)
+
 @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
 def back_main(m):
     uid=str(m.from_user.id)
@@ -343,6 +390,7 @@ def back_main(m):
     if uid in pending_admin: del pending_admin[uid]
     if uid in pending_buy: del pending_buy[uid]
     bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+
 def run_flask(): app.run(host="0.0.0.0",port=10000)
 threading.Thread(target=run_flask,daemon=True).start()
 bot.infinity_polling()
