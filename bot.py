@@ -191,7 +191,7 @@ def cb_handler(c):
         if data=="addsel_BACK":
             bot.edit_message_text("👇 Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
             return      
-        if data.startswith("addsel_"):
+    if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         tmp=data.replace("addsel_","",1)
         if tmp.startswith("GAME_CARROM_"):
