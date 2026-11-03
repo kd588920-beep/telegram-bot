@@ -182,17 +182,17 @@ def cb_handler(c):
             except: pass
         try: bot.answer_callback_query(c.id,f"✅ {user_country[uid]}")
         except: pass
-             if data.startswith("addsel_"):
+         if data.startswith("addsel_"):
         if c.from_user.id!=ADMIN_ID: return
         tmp=data.replace("addsel_","",1)
         if tmp=="GAME_CARROM":
-            bot.edit_message_text("🎯 CARROM STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_carrom_kb())
+            bot.edit_message_text("CARROM STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_carrom_kb())
             return
         if tmp=="GAME_8BALL":
-            bot.edit_message_text("🎯 8BALL STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_8ball_kb())
+            bot.edit_message_text("8BALL STOCK POLL\nSelect Days:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_8ball_kb())
             return
         if tmp=="BACK":
-            bot.edit_message_text("👇 Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
+            bot.edit_message_text("Select Stock Type:", c.message.chat.id, c.message.message_id, reply_markup=add_stock_inline_kb())
             return
         if tmp.startswith("GAME_CARROM_"):
             game="GAME_CARROM"
@@ -203,9 +203,9 @@ def cb_handler(c):
         else:
             _,game,day=data.split("_")
         pending_add[uid]=(game,day)
-        bot.send_message(c.message.chat.id,f"✅ {game} {day} Selected\nNow send IDs")
-        return      
-    if data.startswith("buy_"):
+        bot.send_message(c.message.chat.id,f"{game} {day} Selected\nNow send IDs")
+        return
+    if data.startswith("buy_"):        
         _,game,day=data.split("_")
         stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
         p,_=get_price(c.from_user.id,day)
