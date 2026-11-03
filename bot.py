@@ -41,25 +41,42 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "KOUSHIK BOT LIVE - FIXED 1.0"
+    return "KOUSHIK BOT LIVE - PRICE FIXED"
 
 def get_price(uid, day):
     s=str(uid)
     if s==str(ADMIN_ID) or user_plan.get(s,"FREE") in ["VIP","RESELLER"]:
         return vip_price.get(day,price.get(day)),"VIP"
-    return price.get(day),"Normal"
+    return price.get(day),"FREE"
 
-def welcome_text(uid):
-    uid=str(uid)
-    bal=user_balance.get(uid,0)
-    country=user_country.get(uid,"India")
-    plan="BOSS" if uid==str(ADMIN_ID) else user_plan.get(uid,"FREE")
-    return f"Welcome Koushik Gaming!\nPlan:{plan}\nBalance:Rs.{bal}\nCountry:{country}\nChannel:@gamingkoushikyt"
+def price_list_text(uid):
+    s=str(uid)
+    if s==str(ADMIN_ID) or user_plan.get(s,"FREE") in ["VIP","RESELLER"]:
+        p_dict=vip_price
+        medal="VIP/Reseller - Rs40"
+    else:
+        p_dict=price
+        medal="FREE - Rs60"
+    return f"""CARROM / 8 BALL POOL
+
+Your Medal: {medal}
+
+Price List
+1 Days - Rs.{p_dict['1D']}
+3 Days - Rs.{p_dict['3D']}
+7 Days - Rs.{p_dict['7D']}
+15 Days - Rs.{p_dict['15D']}
+30 Days - Rs.{p_dict['30D']}
+
+Select Buy button to purchase"""
 
 def get_stock_text():
-    txt="Stock\n"
+    txt="Live Stock\n\nCARROM\n"
     for d in ["1D","3D","7D","15D","30D"]:
-        txt+=f"{d}:{len(stock_carrom.get(d,[]))}\n"
+        txt+=f"{d}: {len(stock_carrom.get(d,[]))} keys\n"
+    txt+="\n8 BALL\n"
+    for d in ["1D","3D","7D","15D","30D"]:
+        txt+=f"{d}: {len(stock_8ball.get(d,[]))} keys\n"
     return txt
 
 def country_kb():
@@ -105,21 +122,38 @@ def add_stock_inline_kb():
     m.add(types.InlineKeyboardButton("8BALL 15D",callback_data="addsel_8BALL_15D"),types.InlineKeyboardButton("8BALL 30D",callback_data="addsel_8BALL_30D"))
     return m
 
-if BOT_TOKEN:
-    bot = telebot.TeleBot(BOT_TOKEN)
+def welcome_text(uid):
+    uid=str(uid)
+    bal=user_balance.get(uid,0)
+    country=user_country.get(uid,"India")
+    plan="BOSS" if uid==str(ADMIN_ID) else user_plan.get(uid,"FREE")
+    return f"Welcome Koushik Gaming!\nPlan:{plan}\nBalance:Rs.{bal}\nCountry:{country}\nChannel:@gamingkoushikyt"
 
+# ---- BOT SETUP ----
+if not BOT_TOKEN:
+    print("BOT_TOKEN missing")
+
+bot = telebot.TeleBot(BOT_TOKEN) if BOT_TOKEN else None
+
+if bot:
     @bot.message_handler(commands=['start'])
     def start_cmd(m):
         uid=str(m.from_user.id)
-        if uid not in user_balance: user_balance[uid]=0.0; save_data()
+        if uid not in user_balance:
+            user_balance[uid]=0.0; save_data()
         if uid not in user_country:
             bot.send_message(m.chat.id,"Select country",reply_markup=country_kb())
         else:
             bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
 
-    @bot.message_handler(commands=['support'])
+    @bot.message_handler(commands=['price','prices'])
+    def price_cmd(m):
+        # FIXED: ebar welcome noy, price list asbe
+        bot.send_message(m.chat.id, price_list_text(m.from_user.id), reply_markup=main_kb())
+
+    @bot.message_handler(commands=['support','help'])
     def support_cmd(m):
-        bot.send_message(m.chat.id,"Contact @koushik_098",reply_markup=main_kb())
+        bot.send_message(m.chat.id,"Contact @koushik_098", reply_markup=main_kb())
 
     @bot.callback_query_handler(func=lambda c: True)
     def cb_handler(c):
@@ -139,7 +173,7 @@ if BOT_TOKEN:
             stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
             p,_=get_price(c.from_user.id,day)
             if len(stock_list)==0:
-                bot.send_message(c.message.chat.id,"Out of Stock")
+                bot.send_message(c.message.chat.id,"Out of Stock",reply_markup=main_kb())
                 return
             pending_buy[uid]=(game,day)
             bot.send_message(c.message.chat.id,f"Confirm {game} {day} Rs.{p}",reply_markup=confirm_kb())
@@ -151,9 +185,8 @@ if BOT_TOKEN:
             bal=user_balance.get(uid,0)
             stock_list=stock_carrom.get(day,[]) if "CARROM" in game else stock_8ball.get(day,[])
             if len(stock_list)==0 or bal<p:
-                bot.send_message(c.message.chat.id,"Failed check bal/stock")
-                del pending_buy[uid]
-                return
+                bot.send_message(c.message.chat.id,"Failed check balance/stock",reply_markup=main_kb())
+                del pending_buy[uid]; return
             key=stock_list.pop(0)
             user_balance[uid]=bal-p
             if "CARROM" in game: stock_carrom[day]=stock_list
@@ -172,38 +205,48 @@ if BOT_TOKEN:
             bot.send_message(m.chat.id,"Select",reply_markup=add_stock_inline_kb())
 
     @bot.message_handler(func=lambda m: m.text and "Buy 1 Days" in m.text)
-    def buy1(m): bot.send_message(m.chat.id,"Select Game",reply_markup=buy_game_kb("1D"))
+    def buy1(m): bot.send_message(m.chat.id,"1 Days Plan Selected\nSelect a Game:",reply_markup=buy_game_kb("1D"))
     @bot.message_handler(func=lambda m: m.text and "Buy 3 Days" in m.text)
-    def buy3(m): bot.send_message(m.chat.id,"Select Game",reply_markup=buy_game_kb("3D"))
+    def buy3(m): bot.send_message(m.chat.id,"3 Days Plan Selected\nSelect a Game:",reply_markup=buy_game_kb("3D"))
     @bot.message_handler(func=lambda m: m.text and "Buy 7 Days" in m.text)
-    def buy7(m): bot.send_message(m.chat.id,"Select Game",reply_markup=buy_game_kb("7D"))
+    def buy7(m): bot.send_message(m.chat.id,"7 Days Plan Selected\nSelect a Game:",reply_markup=buy_game_kb("7D"))
     @bot.message_handler(func=lambda m: m.text and "Buy 15 Days" in m.text)
-    def buy15(m): bot.send_message(m.chat.id,"Select Game",reply_markup=buy_game_kb("15D"))
+    def buy15(m): bot.send_message(m.chat.id,"15 Days Plan Selected\nSelect a Game:",reply_markup=buy_game_kb("15D"))
     @bot.message_handler(func=lambda m: m.text and "Buy 30 Days" in m.text)
-    def buy30(m): bot.send_message(m.chat.id,"Select Game",reply_markup=buy_game_kb("30D"))
+    def buy30(m): bot.send_message(m.chat.id,"30 Days Plan Selected\nSelect a Game:",reply_markup=buy_game_kb("30D"))
 
-    @bot.message_handler(func=lambda m: m.text and "Balance" in m.text)
-    def bal_cmd(m):
+    @bot.message_handler(func=lambda m: m.text and "Stock" in m.text and "Add Stock" not in m.text and "Check Stock" not in m.text)
+    def stock_btn(m):
+        bot.send_message(m.chat.id,get_stock_text(),reply_markup=main_kb())
+
+    @bot.message_handler(func=lambda m: m.text and "Balance" in m.text and "Add Balance" not in m.text)
+    def bal_btn(m):
         bal=user_balance.get(str(m.from_user.id),0)
         bot.send_message(m.chat.id,f"Balance Rs.{bal}",reply_markup=main_kb())
 
+    @bot.message_handler(func=lambda m: m.text and "Back to Main" in m.text)
+    def back_main(m):
+        bot.send_message(m.chat.id,welcome_text(m.from_user.id),reply_markup=main_kb())
+
     @bot.message_handler(func=lambda m: str(m.from_user.id) in pending_add)
-    def pending_handler(m):
+    def pending_add_handler(m):
         if m.from_user.id!=ADMIN_ID: return
         uid=str(m.from_user.id)
         if uid not in pending_add: return
         game,day=pending_add[uid]
-        keys=m.text.strip().split("\n")
+        keys=[k.strip() for k in m.text.strip().split("\n") if k.strip()]
         for k in keys:
-            k=k.strip()
-            if not k: continue
             if "CARROM" in game: stock_carrom[day].append(k)
             else: stock_8ball[day].append(k)
         save_data(); del pending_add[uid]
-        bot.send_message(m.chat.id,f"Added {len(keys)}",reply_markup=admin_kb())
+        bot.send_message(m.chat.id,f"Added {len(keys)} keys to {game} {day}",reply_markup=admin_kb())
 
+    # IMPORTANT: fallback sobar ses e
     @bot.message_handler(func=lambda m: True)
     def fallback(m):
+        txt=(m.text or "").lower()
+        if "/price" in txt or "/support" in txt or "/start" in txt:
+            return
         uid=str(m.from_user.id)
         if uid not in user_country:
             bot.send_message(m.chat.id,"Select country",reply_markup=country_kb())
@@ -215,14 +258,11 @@ if BOT_TOKEN:
             try:
                 bot.infinity_polling()
             except Exception as e:
-                print(f"Bot polling error: {e}")
+                print(f"Polling error {e}")
                 time.sleep(5)
 
     threading.Thread(target=run_bot,daemon=True).start()
 
+# Flask always runs
 if __name__ == "__main__":
     app.run(host="0.0.0.0",port=10000)
-else:
-    # For gunicorn on Render
-    if BOT_TOKEN:
-        threading.Thread(target=lambda: app.run(host="0.0.0.0",port=10000),daemon=True).start()
